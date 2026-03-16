@@ -22,7 +22,37 @@ Tell the user to install anything missing, then proceed.
 
 ---
 
-## Step 2 — Clone the PreQL Repository
+## Step 2 — Authenticate with GitHub
+
+Tell the user: "We'll authenticate with CreditKarma's GitHub so you can clone the repo."
+
+Check if `gh` is installed:
+```bash
+gh --version
+```
+
+If not found, install it via **Workspace ONE Intelligent Hub** (search "GitHub CLI"), then verify again.
+
+Once installed:
+```bash
+gh auth login --hostname code.corp.creditkarma.com
+```
+
+When prompted:
+- **Protocol:** HTTPS
+- **Authenticate Git with your GitHub credentials?** Yes
+- **How to authenticate:** Login with a web browser
+
+Wait for the user to confirm the browser flow completed. Then verify:
+```bash
+gh auth status --hostname code.corp.creditkarma.com
+```
+
+If it shows "Logged in to code.corp.creditkarma.com", proceed.
+
+---
+
+## Step 3 — Clone the PreQL Repository
 
 ```bash
 git clone https://code.corp.creditkarma.com/nate-polland-ck/PreQL ~/Documents/PreQL
@@ -33,7 +63,7 @@ If the directory already exists, ask the user whether this is a re-run or a fres
 
 ---
 
-## Step 3 — Install Skills
+## Step 4 — Install Skills
 
 ```bash
 cd ~/Documents/PreQL
@@ -44,7 +74,7 @@ Confirm all 4 skills were linked successfully. If any show warnings, follow the 
 
 ---
 
-## Step 4 — Connect BigQuery
+## Step 5 — Connect BigQuery
 
 ```bash
 claude mcp add bigquery --scope user --transport stdio -- uvx mcp-server-bigquery --project prod-ck-abl-data-53 --location US
@@ -60,7 +90,7 @@ Then retry.
 
 ---
 
-## Step 5 — Authenticate with Google
+## Step 6 — Authenticate with Google
 
 ```bash
 gcloud auth login
@@ -74,7 +104,7 @@ If `gcloud` auth fails or they get "Access Denied" when querying BigQuery later:
 
 ---
 
-## Step 6 — Verify the Connection
+## Step 7 — Verify the Connection
 
 Run a quick test:
 
@@ -83,11 +113,11 @@ SELECT 1 AS connection_test
 ```
 
 If it returns a result: setup is complete.
-If it fails: troubleshoot auth (Step 5) before continuing.
+If it fails: troubleshoot auth (Step 6) before continuing.
 
 ---
 
-## Step 7 — Open PreQL and Orient the User
+## Step 8 — Open PreQL and Orient the User
 
 Tell the user setup is complete. Then say:
 
