@@ -117,21 +117,23 @@ Run `gcloud auth list` to check for an active account. If none shown, go back to
 
 **"Access Denied" on `prod-ck-abl-data-53` (no access to the project at all):**
 The user needs to request Airlock BigQuery access via SailPoint:
-1. Go to [SailPoint](https://iam.int.creditkarma.com) → **Manage My Access**
+1. Go to [SailPoint](https://iam.int.creditkarma.com/identityiq/home.jsf) → **Manage My Access**
 2. Search for **"Airlock ABL BQ Access"** and submit the request
 3. Their manager will receive an approval email — approval typically takes 1–2 business days
 
-Let them know to come back once approved — everything else is already set up. If they have trouble logging into SailPoint, have them clear cookies at `chrome://settings/content/siteDetails?site=https://iam.int.creditkarma.com/` and ensure Global Protect VPN is connected to `CK-US-WEST-GW` or `CK-US-EAST-GW` (not "Best Available").
+Let them know to come back once approved — everything else is already set up. Full instructions: https://airlock.static.corp.creditkarma.com/sailpoint/#request-access-through-sailpoint
+
+If they have trouble logging into SailPoint: clear cookies at `chrome://settings/content/siteDetails?site=https://iam.int.creditkarma.com/` and ensure Global Protect VPN is connected to `CK-US-WEST-GW` or `CK-US-EAST-GW` (not "Best Available").
 
 **"Access Denied" on a specific dataset or view (general project access works, but one dataset fails):**
 The user has project-level access but not to that specific dataset. To get it:
 1. Find the dataset name in the error message (format: `project:dataset.table`)
 2. Go to the [Airlock Access Catalog](https://airlock.static.corp.creditkarma.com/index.html) and search for the dataset name
 3. Find the required Google group under "Access Info Tag"
-4. In [SailPoint](https://iam.int.creditkarma.com), search for that group name (without `@creditkarma.com`) and submit a request
+4. In [SailPoint](https://iam.int.creditkarma.com/identityiq/home.jsf), search for that group name (without `@creditkarma.com`) and submit a request
 5. Manager approval required
 
-For questions: `#airlock_access_control` on Slack.
+Full instructions: https://airlock.static.corp.creditkarma.com/sailpoint/#request-access-through-sailpoint. For questions: `#airlock_access_control` on Slack.
 
 **Table or view not found in ABL:**
 The table may not have been added to `prod-ck-abl-data-53` yet — this is a separate issue from permissions. Direct the user to `#airlock_access_control` on Slack for guidance on adding it.
