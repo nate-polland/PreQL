@@ -1,6 +1,6 @@
 # PreQL
 
-PreQL is a BigQuery analytics tool for CreditKarma analysts and PMs. You ask a question in plain English — PreQL works with you to write the SQL, validate it, run it, and explain what it found.
+PreQL is a Claude Code based tool for Credit Karma analysts and PMs. You ask a question in plain English and PreQL works with you to write the SQL, validate it, run it, and explain what it found.
 
 ---
 
