@@ -187,3 +187,7 @@ Only document the delta — what is structurally different in the test arm vs. c
 - When tracing cross-auth sessions: identify which session identifier persists across the auth boundary (e.g., cookieId). A new session ID (traceId) is typically created at authentication AND at page reloads/errors — TOS and other pre-auth steps may be on a different session ID than the completion event. A traceId change is NOT automatically a dropout — check whether the cookieId is shared and the time gap is consistent with a reload. Stitch via cookieId to connect the full journey.
 - Document everything to Funnels/ so future queries work without re-exploration
 - Refer to the project's `CLAUDE.md` and `Schema/` for table names, event field names, and stitch key specifics
+
+## Sharing Your Work
+
+The funnel doc you just created is saved locally and available to you immediately. It is **not yet shared** with the rest of the team. When you're ready to contribute it back to the shared repo, run `/contribute` and PreQL will walk you through the process.

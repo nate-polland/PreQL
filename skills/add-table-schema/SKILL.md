@@ -103,3 +103,7 @@ After writing the schema:
 - Validate flag semantics — never assume 1 = true/success
 - Validate join keys with actual match rates before documenting them
 - Filters from a user's query inform understanding but are never persisted in schema docs
+
+## Sharing Your Work
+
+The schema you just documented is saved locally and available to you immediately. It is **not yet shared** with the rest of the team. When you're ready to contribute it back to the shared repo, run `/contribute` and PreQL will walk you through the process.
