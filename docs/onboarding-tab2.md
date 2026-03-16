@@ -4,6 +4,27 @@ You are setting up PreQL for a new user. **Start immediately — run each check 
 
 ---
 
+## Step 0 — Check BigQuery Access
+
+Ask the user: "Have you requested BigQuery access via SailPoint yet?"
+
+**If yes and approved:** proceed to Step 1.
+
+**If yes but pending:** let them know they'll need to wait for manager approval (typically 1–2 business days) before setup can complete. You can continue through Step 5, but the connection test in Step 6 will fail until access is approved. Let them know to come back once approved.
+
+**If no:** walk them through requesting it now:
+1. Go to [SailPoint](https://iam.int.creditkarma.com/identityiq/home.jsf) → **Manage My Access**
+2. Search for **"Airlock ABL BQ Access"** and submit the request
+3. Their manager will receive an approval email
+
+If they have trouble logging in: clear cookies at `chrome://settings/content/siteDetails?site=https://iam.int.creditkarma.com/` and confirm Global Protect VPN is connected to `CK-US-WEST-GW` or `CK-US-EAST-GW` (not "Best Available").
+
+Full SailPoint instructions: https://airlock.static.corp.creditkarma.com/sailpoint/#request-access-through-sailpoint
+
+Once submitted, continue setup — they can complete everything except the final connection test while waiting for approval.
+
+---
+
 ## Step 1 — Check Prerequisites
 
 Run immediately:
