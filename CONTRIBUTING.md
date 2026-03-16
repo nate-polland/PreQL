@@ -12,6 +12,8 @@ Different file types have different review requirements. The table below defines
 | Edit to existing `Schema/` file | Senior maintainer | Changes should be data-validated, not opinion-based |
 | Edit to `Context/` files | Senior maintainer (npolland or delegate) | These are load-bearing — explain what broke or what was wrong |
 | Edit to `Agents/` files | Senior maintainer | Changes affect all users' query generation |
+| New `skills/` file | Any maintainer | New command for the team — validate it works end-to-end before submitting |
+| Edit to existing `skills/` file | Senior maintainer | Changes affect all users' commands — explain what was wrong and what changed |
 | Edit to `CLAUDE.md` | npolland only | Core orchestration — explicit approval required |
 
 ---
@@ -49,9 +51,26 @@ Claude will ask you questions about the funnel, map the steps, and create a `Fun
 
 ---
 
+## How to Create a New Skill
+
+Skills are interactive commands users can invoke with `/skill-name`. They live in `skills/[skill-name]/SKILL.md`.
+
+1. Create `skills/[skill-name]/SKILL.md` following the format of an existing skill
+2. Test it end-to-end — run through the full flow yourself before submitting
+3. Run `bash scripts/install-skills.sh` to symlink it locally and verify it appears in Claude Code
+4. Open a PR — any maintainer can merge a new skill
+
+Once merged, all users get it automatically on their next `git pull` (no re-install needed — symlinks pick it up).
+
+**To propose an improvement to an existing skill**, open a PR with:
+- What behavior was wrong or missing
+- What you changed and why
+
+---
+
 ## How to Propose Changes to Core Files
 
-Changes to `Context/`, `Agents/`, or `CLAUDE.md` require more scrutiny because they affect every user.
+Changes to `Context/`, `Agents/`, `skills/` (edits, not additions), or `CLAUDE.md` require more scrutiny because they affect every user.
 
 **Required in your PR description:**
 - What was wrong or incomplete in the current version

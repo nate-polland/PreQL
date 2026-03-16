@@ -53,6 +53,14 @@ PreQL/
 ├── CLAUDE.md                          # Orchestration instructions (restricted — see CONTRIBUTING.md)
 ├── README.md                          # This file
 ├── CONTRIBUTING.md                    # How to contribute
+├── ONBOARDING.md                      # New user setup guide
+├── skills/
+│   ├── onboard/                       # /onboard — setup check + orientation
+│   ├── help-preql/                    # /help-preql — always-available reference
+│   ├── funnel-discovery/              # /funnel-discovery — map a product funnel
+│   └── add-table-schema/              # /add-table-schema — document a new table
+├── scripts/
+│   └── install-skills.sh             # Symlinks skills/ into ~/.claude/skills/
 ├── Agents/
 │   ├── product-analyst-agent.md       # SQL generation
 │   └── bi-validation-agent.md         # SQL validation

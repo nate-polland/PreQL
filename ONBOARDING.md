@@ -100,6 +100,18 @@ This opens a browser window. Sign in with your CreditKarma Google account.
 
 ---
 
+## Step 5b — Install Skills
+
+PreQL's built-in commands (`/onboard`, `/funnel-discovery`, etc.) are installed as skills linked from the repo. Run once after cloning:
+
+```bash
+bash scripts/install-skills.sh
+```
+
+Because these are symlinks, pulling future updates to the repo automatically updates the skills — no need to re-run.
+
+---
+
 ## Step 6 — Open PreQL
 
 ```bash
