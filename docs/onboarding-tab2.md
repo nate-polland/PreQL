@@ -21,7 +21,7 @@ Tell the user what to install, wait for them to confirm it's done, then re-run t
 
 ---
 
-## Step 2 — Check GitHub Auth
+## Step 2 — Authenticate with GitHub
 
 Run:
 
@@ -52,11 +52,21 @@ Tell the user a browser window will open — they should sign in with their Cred
 git clone https://code.corp.creditkarma.com/nate-polland-ck/PreQL ~/Documents/PreQL
 ```
 
-If `~/Documents/PreQL` already exists, ask: "Looks like the repo is already cloned — is this a re-run or a fresh machine?" If re-run, skip to Step 4 to verify skills are still linked.
+If `~/Documents/PreQL` already exists, ask: "Looks like the repo is already cloned — is this a re-run or a fresh machine?" If re-run, skip to Step 5 to verify skills are still linked.
 
 ---
 
-## Step 4 — Install Skills
+## Step 4 — Authenticate with Google
+
+```bash
+gcloud auth login
+```
+
+Tell the user a browser window will open — they should sign in with their CreditKarma Google account. Wait for them to confirm it completed before moving on.
+
+---
+
+## Step 5 — Install Skills
 
 ```bash
 cd ~/Documents/PreQL && bash scripts/install-skills.sh
@@ -66,7 +76,7 @@ All 4 skills should show as linked. If any show warnings, follow the instruction
 
 ---
 
-## Step 5 — Check BigQuery Connection
+## Step 6 — Connect BigQuery
 
 Run:
 
@@ -74,7 +84,7 @@ Run:
 claude mcp list
 ```
 
-**If `bigquery` is listed:** skip to the connection test below.
+**If `bigquery` is already listed:** skip to Step 7.
 
 **If not listed:** run:
 
@@ -88,31 +98,47 @@ pip install uv
 ```
 Then retry.
 
-Now test the connection:
+---
+
+## Step 7 — Verify the Connection
+
+Run a quick test:
 
 ```sql
 SELECT 1 AS connection_test
 ```
 
-**If it succeeds:** proceed to Step 6.
+**If it succeeds:** setup is complete — proceed to Step 8.
 
-**If it fails with an auth error:** proceed to Step 6 to authenticate. If it fails with "Access Denied" on `prod-ck-abl-data-53`, the user needs to request Airlock BigQuery access: https://airlock.static.corp.creditkarma.com/bigquery_access/index.html — this takes 1–2 business days. Let them know and wrap up setup for now.
+**If it fails, diagnose by error type:**
+
+**Auth error / not authenticated:**
+Run `gcloud auth list` to check for an active account. If none shown, go back to Step 4 and re-authenticate.
+
+**"Access Denied" on `prod-ck-abl-data-53` (no access to the project at all):**
+The user needs to request Airlock BigQuery access via SailPoint:
+1. Go to [SailPoint](https://iam.int.creditkarma.com) → **Manage My Access**
+2. Search for **"Airlock ABL BQ Access"** and submit the request
+3. Their manager will receive an approval email — approval typically takes 1–2 business days
+
+Let them know to come back once approved — everything else is already set up. If they have trouble logging into SailPoint, have them clear cookies at `chrome://settings/content/siteDetails?site=https://iam.int.creditkarma.com/` and ensure Global Protect VPN is connected to `CK-US-WEST-GW` or `CK-US-EAST-GW` (not "Best Available").
+
+**"Access Denied" on a specific dataset or view (general project access works, but one dataset fails):**
+The user has project-level access but not to that specific dataset. To get it:
+1. Find the dataset name in the error message (format: `project:dataset.table`)
+2. Go to the [Airlock Access Catalog](https://airlock.static.corp.creditkarma.com/index.html) and search for the dataset name
+3. Find the required Google group under "Access Info Tag"
+4. In [SailPoint](https://iam.int.creditkarma.com), search for that group name (without `@creditkarma.com`) and submit a request
+5. Manager approval required
+
+For questions: `#airlock_access_control` on Slack.
+
+**Table or view not found in ABL:**
+The table may not have been added to `prod-ck-abl-data-53` yet — this is a separate issue from permissions. Direct the user to `#airlock_access_control` on Slack for guidance on adding it.
 
 ---
 
-## Step 6 — Authenticate with Google (if needed)
-
-Only run this step if the BigQuery test in Step 5 failed.
-
-```bash
-gcloud auth login
-```
-
-Tell the user a browser window will open — they should sign in with their CreditKarma Google account. Wait for them to confirm it completed, then re-run the connection test from Step 5.
-
----
-
-## Step 7 — Done
+## Step 8 — Done
 
 Tell the user setup is complete. Then say:
 
