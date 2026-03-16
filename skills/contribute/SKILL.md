@@ -34,19 +34,40 @@ Tell the user what you found and which tier each change falls into. If there's a
 
 For new files only (no edits to existing core files):
 
-1. Show the user a summary of what will be committed and ask them to confirm
-2. Stage and commit:
+1. **Check for collisions first.** Pull latest and check if any of the new files already exist on `main`:
    ```bash
    cd ~/Documents/PreQL
+   git fetch origin
+   git diff --name-only HEAD origin/main
+   ```
+   Also check directly:
+   ```bash
+   git show origin/main:[filepath]
+   ```
+   - **File doesn't exist on main:** safe to proceed.
+   - **File already exists on main:** tell the user: "Someone else already pushed a file at that path. Let me pull it down so you can review it — we'll merge your additions rather than overwrite theirs." Pull, show them the existing content, and help them reconcile before committing.
+
+2. Pull latest before committing:
+   ```bash
+   git pull origin main
+   ```
+
+3. Show the user a summary of what will be committed and ask them to confirm.
+
+4. Stage and commit:
+   ```bash
    git add [files]
    git commit -m "[description]"
    ```
    Write a clear commit message: what was added and why (e.g., "Add schema for fact_tracking_revenue_ext", "Document ChatGPT registration funnel").
-3. Push:
+
+5. Push:
    ```bash
    git push
    ```
-4. Confirm the push succeeded and share the commit URL.
+   If the push is rejected (someone pushed between your pull and push), run `git pull --rebase origin main` and push again.
+
+6. Confirm the push succeeded and share the commit URL.
 
 ---
 
