@@ -163,17 +163,32 @@ For questions: `#airlock_access_control` on Slack.
 
 ## Step 7 — Create the PreQL Launcher
 
-Create a double-clickable launcher and put it on the Desktop:
+Create a double-clickable launcher, put it on the Desktop, and apply the PreQL logo as its icon:
 
 ```bash
 cat > ~/Desktop/PreQL.command << 'EOF'
 #!/bin/bash
-cd ~/Documents/PreQL && claude
+open -a "Claude" "$HOME/Documents/PreQL"
 EOF
 chmod +x ~/Desktop/PreQL.command
 ```
 
-Tell the user: "A **PreQL** icon just appeared on your Desktop. You can double-click it anytime to launch PreQL. To keep it handy, drag it to your Dock."
+Then apply the icon:
+
+```bash
+pip3 install pyobjc-framework-Cocoa -q && python3 - << 'PYEOF'
+import AppKit, os
+image_path = os.path.expanduser("~/Documents/PreQL/assets/PreQL Logo.png")
+file_path = os.path.expanduser("~/Desktop/PreQL.command")
+image = AppKit.NSImage.alloc().initWithContentsOfFile_(image_path)
+AppKit.NSWorkspace.sharedWorkspace().setIcon_forFile_options_(image, file_path, 0)
+print("Icon applied.")
+PYEOF
+```
+
+Tell the user: "A **PreQL** icon just appeared on your Desktop. Double-click it anytime to open PreQL directly in Claude. To keep it handy, drag it to your Dock — it goes on the right side of the divider line."
+
+**First launch note:** macOS may show a warning the first time. Tell the user to **right-click → Open → Open** to get past it — they only need to do this once.
 
 ---
 
