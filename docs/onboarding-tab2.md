@@ -6,22 +6,25 @@ You are setting up PreQL for a new user. **Start immediately — run each check 
 
 ## Step 0 — Check BigQuery Access
 
-Ask the user: "Have you requested BigQuery access via SailPoint yet?"
+Tell the user: "Before we start, I need to check that you have access to the data warehouse PreQL connects to. This is a one-time approval that goes through your manager."
 
-**If yes and approved:** proceed to Step 1.
+Ask: "Have you used BigQuery or Airlock before, or does this sound unfamiliar?"
 
-**If yes but pending:** let them know they'll need to wait for manager approval (typically 1–2 business days) before setup can complete. You can continue through Step 5, but the connection test in Step 6 will fail until access is approved. Let them know to come back once approved.
+**If they say yes / they're familiar:** ask if their access has been approved. If yes, proceed to Step 1. If pending, let them know to come back once their manager approves (typically 1–2 business days) — you can continue with the rest of setup in the meantime.
 
-**If no:** walk them through requesting it now:
-1. Go to [SailPoint](https://iam.int.creditkarma.com/identityiq/home.jsf) → **Manage My Access**
-2. Search for **"Airlock ABL BQ Access"** and submit the request
-3. Their manager will receive an approval email
+**If they're not sure or haven't done this before:** walk them through it step by step:
 
-If they have trouble logging in: clear cookies at `chrome://settings/content/siteDetails?site=https://iam.int.creditkarma.com/` and confirm Global Protect VPN is connected to `CK-US-WEST-GW` or `CK-US-EAST-GW` (not "Best Available").
+1. Tell them: "You'll need to request data access through an internal tool called SailPoint. It only takes a few minutes to submit — your manager just needs to approve it, which usually happens within 1–2 business days."
 
-Full SailPoint instructions: https://airlock.static.corp.creditkarma.com/sailpoint/#request-access-through-sailpoint
+2. Direct them to open [SailPoint](https://iam.int.creditkarma.com/identityiq/home.jsf) in their browser.
+   - If they can't reach it: confirm their Global Protect VPN is connected to `CK-US-WEST-GW` or `CK-US-EAST-GW` (not "Best Available")
+   - If they get a login error: have them clear cookies at `chrome://settings/content/siteDetails?site=https://iam.int.creditkarma.com/` then try again
 
-Once submitted, continue setup — they can complete everything except the final connection test while waiting for approval.
+3. Once they're in: click **Manage My Access**, search for **"Airlock ABL BQ Access"**, and submit the request.
+
+4. Tell them: "Your manager will get an email to approve it. Once that's done you'll have full access. Let's keep going with setup — we'll test the connection at the end."
+
+Continue to Step 1 regardless of approval status — everything except the final connection test can be completed while waiting.
 
 ---
 
