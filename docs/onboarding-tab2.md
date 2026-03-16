@@ -74,13 +74,13 @@ For anything missing:
 - **git:** install via Homebrew — `brew install git` (install Homebrew first via **Workspace ONE Intelligent Hub** if needed)
 - **gcloud:** `brew install --cask google-cloud-sdk`
 
-Then clone:
+Create the folder and clone:
 
 ```bash
-git clone https://code.corp.creditkarma.com/nate-polland-ck/PreQL ~/Documents/PreQL
+mkdir -p ~/Documents/Claude\ Code && git clone https://code.corp.creditkarma.com/nate-polland-ck/PreQL ~/Documents/Claude\ Code/PreQL
 ```
 
-If `~/Documents/PreQL` already exists, ask: "Looks like PreQL is already installed — is this a re-run or a fresh machine?" If re-run, skip to Step 6 to verify your connection is still working.
+If `~/Documents/Claude Code/PreQL` already exists, ask: "Looks like PreQL is already installed — is this a re-run or a fresh machine?" If re-run, skip to Step 6 to verify your connection is still working.
 
 ---
 
@@ -97,7 +97,7 @@ Tell the user a browser window will open — they should sign in with their Cred
 ## Step 5 — Install Skills and Connect BigQuery
 
 ```bash
-cd ~/Documents/PreQL && bash scripts/install-skills.sh
+cd ~/Documents/Claude\ Code/PreQL && bash scripts/install-skills.sh
 ```
 
 All 4 skills should show as linked. If any show warnings, follow the instructions in the script output.
@@ -173,7 +173,7 @@ If they confirm, run:
 ```bash
 cat > ~/Desktop/PreQL.command << 'EOF'
 #!/bin/bash
-open -a "Claude" "$HOME/Documents/PreQL"
+open -a "Claude" "$HOME/Documents/Claude Code/PreQL"
 EOF
 chmod +x ~/Desktop/PreQL.command
 ```
@@ -183,7 +183,7 @@ Then apply the PreQL icon:
 ```bash
 pip3 install pyobjc-framework-Cocoa -q && python3 - << 'PYEOF'
 import AppKit, os
-image_path = os.path.expanduser("~/Documents/PreQL/assets/PreQL Logo.png")
+image_path = os.path.expanduser("~/Documents/Claude Code/PreQL/assets/PreQL Logo.png")
 file_path = os.path.expanduser("~/Desktop/PreQL.command")
 image = AppKit.NSImage.alloc().initWithContentsOfFile_(image_path)
 AppKit.NSWorkspace.sharedWorkspace().setIcon_forFile_options_(image, file_path, 0)
