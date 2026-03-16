@@ -27,6 +27,7 @@ You get a plain-English summary, any caveats, and the final SQL — ready to cop
 | `/onboard` | Guided setup walkthrough (connection check, orientation, sample query) |
 | `/funnel-discovery` | Maps a product funnel end-to-end and saves it as a reusable doc |
 | `/add-table-schema` | Documents a new BigQuery table for the team |
+| `/contribute` | Push local changes (new schemas, funnels, fixes) back to the shared repo |
 
 `/funnel-discovery` and `/add-table-schema` are interactive workflows — they ask questions, run diagnostics, and write documentation that becomes available to everyone on the team.
 

@@ -43,6 +43,7 @@ Just type your question. Examples:
 |---|---|
 | `/funnel-discovery` | Maps a product funnel interactively and saves a reusable doc |
 | `/add-table-schema` | Documents a new BigQuery table so the team can query it |
+| `/contribute` | Push local changes (new schemas, funnels, fixes) back to GitHub |
 | `/onboard` | Setup check + guided orientation for new users |
 | `/help-preql` | This overview |
 
