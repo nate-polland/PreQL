@@ -15,8 +15,7 @@ gcloud --version
 ```
 
 Report what's installed and what's missing. If anything is missing:
-- **git:** `brew install git`
-- **Node.js:** `brew install node`
+- **git** or **Node.js:** install via **Workspace ONE Intelligent Hub** on your Mac (search "Homebrew"), then run `brew install git` / `brew install node` as needed
 - **gcloud:** `brew install --cask google-cloud-sdk`
 
 Tell the user to install anything missing, then proceed.

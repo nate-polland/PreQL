@@ -48,7 +48,7 @@ PreQL also has guided workflows for documenting new funnels (`/funnel-discovery`
 
 1. **Complete the GenAI Tools for our Workforce training** if you haven't — this gates access to Claude.
 2. **Request BigQuery access** if you don't have it yet: [Airlock BigQuery access request](https://airlock.static.corp.creditkarma.com/bigquery_access/index.html#how-do-i-get-access-to-airlock-bigquery) — takes 1–2 days to approve, so start early.
-3. **Install Claude Code CLI** in Terminal: `npm install -g @anthropic-ai/claude-code`
+3. **Install Homebrew and Claude Code** via **Workspace ONE Intelligent Hub** on your Mac (search "Homebrew" and "Claude Code").
 
 **Then:**
 1. Open Terminal, type `claude`, press Enter
@@ -59,5 +59,5 @@ PreQL also has guided workflows for documenting new funnels (`/funnel-discovery`
 
 ## Questions?
 
-- **Slack:** `[PreQL channel TBD]` for PreQL questions, `#cmty-claude` for Claude questions
+- **Slack:** `#preql` for PreQL questions, `#cmty-claude` for Claude questions
 - **In-tool:** Once set up, type `/help-preql` at any time
