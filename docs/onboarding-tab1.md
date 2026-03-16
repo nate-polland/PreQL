@@ -43,7 +43,9 @@ PreQL has three core functions:
 
 **To launch PreQL after setup:**
 
-Double-click **PreQL** in your Dock or on your Desktop. (Tab 2 creates this for you automatically.)
+Tab 2 creates a **PreQL** icon on your Desktop automatically. To add it to your Dock: drag it to the right side of the Dock, past the divider line. From then on, just click it to open PreQL.
+
+**First launch only:** macOS may show a security warning — right-click → **Open** → **Open** to get past it. You won't see it again.
 
 **To get updates (~every 6–8 weeks):**
 
