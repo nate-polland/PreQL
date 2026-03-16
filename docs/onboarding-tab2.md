@@ -1,39 +1,38 @@
 # PreQL Setup
 
-You are helping a new user set up PreQL, a BigQuery analytics tool. Work through the steps below in order. Be conversational and tell the user what you're doing at each step. If anything fails, troubleshoot before moving on.
+You are setting up PreQL for a new user. **Start immediately — run each check automatically and only pause when the user needs to take an action (e.g., install something, complete a browser auth flow).** Don't ask for permission to proceed between steps. Narrate briefly what you're doing as you go.
 
 ---
 
 ## Step 1 — Check Prerequisites
 
-Run these checks:
+Run immediately:
 
 ```bash
-git --version
-node --version
-gcloud --version
+git --version && node --version && gcloud --version && gh --version
 ```
 
-Report what's installed and what's missing. If anything is missing:
-- **git** or **Node.js:** install via **Workspace ONE Intelligent Hub** on your Mac (search "Homebrew"), then run `brew install git` / `brew install node` as needed
+For anything missing:
+- **git** or **Node.js:** install via **Workspace ONE Intelligent Hub** on your Mac (search "Homebrew"), then `brew install git` / `brew install node`
 - **gcloud:** `brew install --cask google-cloud-sdk`
+- **gh (GitHub CLI):** install via **Workspace ONE Intelligent Hub** (search "GitHub CLI")
 
-Tell the user to install anything missing, then proceed.
+Tell the user what to install, wait for them to confirm it's done, then re-run the checks before moving on.
 
 ---
 
-## Step 2 — Authenticate with GitHub
+## Step 2 — Check GitHub Auth
 
-Tell the user: "We'll authenticate with CreditKarma's GitHub so you can clone the repo."
+Run:
 
-Check if `gh` is installed:
 ```bash
-gh --version
+gh auth status --hostname code.corp.creditkarma.com
 ```
 
-If not found, install it via **Workspace ONE Intelligent Hub** (search "GitHub CLI"), then verify again.
+**If already logged in:** proceed to Step 3.
 
-Once installed:
+**If not logged in:** run:
+
 ```bash
 gh auth login --hostname code.corp.creditkarma.com
 ```
@@ -43,12 +42,7 @@ When prompted:
 - **Authenticate Git with your GitHub credentials?** Yes
 - **How to authenticate:** Login with a web browser
 
-Wait for the user to confirm the browser flow completed. Then verify:
-```bash
-gh auth status --hostname code.corp.creditkarma.com
-```
-
-If it shows "Logged in to code.corp.creditkarma.com", proceed.
+Tell the user a browser window will open — they should sign in with their CreditKarma account. Wait for them to confirm it completed, then verify with `gh auth status` before moving on.
 
 ---
 
@@ -56,75 +50,76 @@ If it shows "Logged in to code.corp.creditkarma.com", proceed.
 
 ```bash
 git clone https://code.corp.creditkarma.com/nate-polland-ck/PreQL ~/Documents/PreQL
-cd ~/Documents/PreQL
 ```
 
-If the directory already exists, ask the user whether this is a re-run or a fresh install.
+If `~/Documents/PreQL` already exists, ask: "Looks like the repo is already cloned — is this a re-run or a fresh machine?" If re-run, skip to Step 4 to verify skills are still linked.
 
 ---
 
 ## Step 4 — Install Skills
 
 ```bash
-cd ~/Documents/PreQL
-bash scripts/install-skills.sh
+cd ~/Documents/PreQL && bash scripts/install-skills.sh
 ```
 
-Confirm all 4 skills were linked successfully. If any show warnings, follow the instructions in the script output.
+All 4 skills should show as linked. If any show warnings, follow the instructions in the script output.
 
 ---
 
-## Step 5 — Connect BigQuery
+## Step 5 — Check BigQuery Connection
+
+Run:
+
+```bash
+claude mcp list
+```
+
+**If `bigquery` is listed:** skip to the connection test below.
+
+**If not listed:** run:
 
 ```bash
 claude mcp add bigquery --scope user --transport stdio -- uvx mcp-server-bigquery --project prod-ck-abl-data-53 --location US
 ```
 
-Tell the user this connects Claude Code to their team's BigQuery project.
-
-If the command fails because `uvx` is not found:
+If this fails because `uvx` is not found:
 ```bash
 pip install uv
 ```
 Then retry.
 
----
-
-## Step 6 — Authenticate with Google
-
-```bash
-gcloud auth login
-```
-
-Tell the user this will open a browser window — they should sign in with their CreditKarma Google account. Wait for them to confirm it completed successfully.
-
-If `gcloud` auth fails or they get "Access Denied" when querying BigQuery later:
-- Have them check Airlock BigQuery access: https://airlock.static.corp.creditkarma.com/bigquery_access/index.html
-- BigQuery access requests take 1–2 business days
-
----
-
-## Step 7 — Verify the Connection
-
-Run a quick test:
+Now test the connection:
 
 ```sql
 SELECT 1 AS connection_test
 ```
 
-If it returns a result: setup is complete.
-If it fails: troubleshoot auth (Step 6) before continuing.
+**If it succeeds:** proceed to Step 6.
+
+**If it fails with an auth error:** proceed to Step 6 to authenticate. If it fails with "Access Denied" on `prod-ck-abl-data-53`, the user needs to request Airlock BigQuery access: https://airlock.static.corp.creditkarma.com/bigquery_access/index.html — this takes 1–2 business days. Let them know and wrap up setup for now.
 
 ---
 
-## Step 8 — Open PreQL and Orient the User
+## Step 6 — Authenticate with Google (if needed)
+
+Only run this step if the BigQuery test in Step 5 failed.
+
+```bash
+gcloud auth login
+```
+
+Tell the user a browser window will open — they should sign in with their CreditKarma Google account. Wait for them to confirm it completed, then re-run the connection test from Step 5.
+
+---
+
+## Step 7 — Done
 
 Tell the user setup is complete. Then say:
 
-> "You're ready to use PreQL. You can ask data questions in plain English — for example: 'How many new members registered last month, broken down by platform?'
+> "You're ready to use PreQL. Ask data questions in plain English — for example: 'How many new members registered last month, broken down by platform?'
 >
-> Type `/help-preql` at any time to see what PreQL can do and what commands are available. Type `/onboard` if you want a guided walkthrough."
+> Type `/help-preql` at any time to see what's available. Type `/onboard` for a guided walkthrough."
 
-Then ask: "Would you like to try a sample query, or is there something specific you want to look into?"
+Then ask: "Want to try a sample query, or is there something specific you want to look into?"
 
 If they want a sample query, run: *"How many new members registered last month, broken down by platform?"* through the full pipeline and show them the result.
