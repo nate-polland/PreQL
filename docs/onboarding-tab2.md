@@ -26,11 +26,9 @@ Tell the user to install anything missing, then proceed.
 ## Step 2 — Clone the PreQL Repository
 
 ```bash
-git clone [PREQL_REPO_URL] ~/Documents/PreQL
+git clone https://code.corp.creditkarma.com/nate-polland-ck/PreQL ~/Documents/PreQL
 cd ~/Documents/PreQL
 ```
-
-> Replace `[PREQL_REPO_URL]` with the actual repository URL before sharing this doc.
 
 If the directory already exists, ask the user whether this is a re-run or a fresh install.
 
