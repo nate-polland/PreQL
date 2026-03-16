@@ -53,7 +53,9 @@ PreQL/
 ├── CLAUDE.md                          # Orchestration instructions (restricted — see CONTRIBUTING.md)
 ├── README.md                          # This file
 ├── CONTRIBUTING.md                    # How to contribute
-├── ONBOARDING.md                      # New user setup guide
+├── docs/
+│   ├── onboarding-tab1.md             # Google Doc Tab 1: overview + getting started
+│   └── onboarding-tab2.md             # Google Doc Tab 2: paste into Claude Code to set up
 ├── skills/
 │   ├── onboard/                       # /onboard — setup check + orientation
 │   ├── help-preql/                    # /help-preql — always-available reference

@@ -98,4 +98,4 @@ If they'd rather use their own question, go for it.
 Close by letting them know:
 - They can ask data questions in plain English at any time
 - `/help-preql` is always available for a refresher
-- `ONBOARDING.md` in the repo has the full written setup guide
+- `docs/onboarding-tab1.md` in the repo has the full written setup guide
