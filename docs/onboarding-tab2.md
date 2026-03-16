@@ -6,25 +6,26 @@ You are setting up PreQL for a new user. **Start immediately — run each check 
 
 ## Step 0 — Check BigQuery Access
 
-Tell the user: "Before we start, I need to check that you have access to the data warehouse PreQL connects to. This is a one-time approval that goes through your manager."
+Try to run this query immediately using the BigQuery MCP tool:
 
-Ask: "Have you used BigQuery or Airlock before, or does this sound unfamiliar?"
+```sql
+SELECT 1 AS connection_test
+```
 
-**If they say yes / they're familiar:** ask if their access has been approved. If yes, proceed to Step 1. If pending, let them know to come back once their manager approves (typically 1–2 business days) — you can continue with the rest of setup in the meantime.
+**If it succeeds:** tell the user their data access is already set up and proceed to Step 1.
 
-**If they're not sure or haven't done this before:** walk them through it step by step:
+**If the BigQuery MCP tool is not available / not configured:** skip this check and proceed to Step 1 — access will be verified at the end of setup in Step 6.
 
-1. Tell them: "You'll need to request data access through an internal tool called SailPoint. It only takes a few minutes to submit — your manager just needs to approve it, which usually happens within 1–2 business days."
+**If it fails with "Access Denied":** tell the user: "You don't have access to the data warehouse yet — we'll need to request it before you can run queries. It takes a few minutes to submit and your manager just needs to approve it, which usually happens within 1–2 business days."
 
-2. Direct them to open [SailPoint](https://iam.int.creditkarma.com/identityiq/home.jsf) in their browser.
-   - If they can't reach it: confirm their Global Protect VPN is connected to `CK-US-WEST-GW` or `CK-US-EAST-GW` (not "Best Available")
-   - If they get a login error: have them clear cookies at `chrome://settings/content/siteDetails?site=https://iam.int.creditkarma.com/` then try again
+Walk them through it:
+1. Open [SailPoint](https://iam.int.creditkarma.com/identityiq/home.jsf) in their browser
+   - Can't reach it? Confirm Global Protect VPN is connected to `CK-US-WEST-GW` or `CK-US-EAST-GW` (not "Best Available")
+   - Login error? Clear cookies at `chrome://settings/content/siteDetails?site=https://iam.int.creditkarma.com/` and retry
+2. Click **Manage My Access**, search for **"Airlock ABL BQ Access"**, and submit the request
+3. Tell them: "Your manager will get an email to approve it. Once approved, come back and run `/onboard` to verify the connection. Let's keep going with the rest of setup now."
 
-3. Once they're in: click **Manage My Access**, search for **"Airlock ABL BQ Access"**, and submit the request.
-
-4. Tell them: "Your manager will get an email to approve it. Once that's done you'll have full access. Let's keep going with setup — we'll test the connection at the end."
-
-Continue to Step 1 regardless of approval status — everything except the final connection test can be completed while waiting.
+Continue to Step 1 regardless — everything except the final connection test can be completed while waiting for approval.
 
 ---
 
@@ -47,7 +48,7 @@ Tell the user what to install, wait for them to confirm it's done, then re-run t
 
 ## Step 2 — Authenticate with GitHub
 
-Run:
+Run immediately:
 
 ```bash
 gh auth status --hostname code.corp.creditkarma.com
@@ -55,18 +56,22 @@ gh auth status --hostname code.corp.creditkarma.com
 
 **If already logged in:** proceed to Step 3.
 
-**If not logged in:** run:
+**If not logged in:** tell the user: "I need to connect to CreditKarma's GitHub — a browser window will open and you'll just need to sign in with your CreditKarma account." Then run:
 
 ```bash
 gh auth login --hostname code.corp.creditkarma.com
 ```
 
-When prompted:
+When prompted, select:
 - **Protocol:** HTTPS
 - **Authenticate Git with your GitHub credentials?** Yes
 - **How to authenticate:** Login with a web browser
 
-Tell the user a browser window will open — they should sign in with their CreditKarma account. Wait for them to confirm it completed, then verify with `gh auth status` before moving on.
+Wait for them to confirm the browser sign-in completed, then verify before moving on:
+
+```bash
+gh auth status --hostname code.corp.creditkarma.com
+```
 
 ---
 
