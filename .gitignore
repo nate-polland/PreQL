@@ -1,0 +1,8 @@
+# Auto-generated backups from Claude Code hook
+.claude/backups/
+
+# BigQuery async temp files
+/tmp/bq_last_job.txt
+
+# macOS
+.DS_Store
