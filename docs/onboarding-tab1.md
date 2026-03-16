@@ -33,11 +33,11 @@ PreQL has three core functions:
 **Before you begin (one-time, ~15 min):**
 
 1. Complete the **GenAI Tools for our Workforce** training — this gates access to Claude.
-2. Install **Homebrew** and **Claude Code** via Workspace ONE Intelligent Hub (search "Homebrew" and "Claude Code").
+2. Install **Homebrew** and **Claude** via Workspace ONE Intelligent Hub (search "Homebrew" and "Claude").
 
 **Then:**
 
-1. Open Claude Code
+1. Open Claude
 2. Copy the contents of **Tab 2** and paste it into the chat
 3. Claude walks you through the rest automatically
 
