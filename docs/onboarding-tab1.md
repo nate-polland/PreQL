@@ -43,7 +43,7 @@ PreQL has three core functions:
 
 **To launch PreQL after setup:**
 
-Open Terminal and type `preql`. (Tab 2 sets this up for you — it's a shortcut that opens Claude Code in the right place.)
+Double-click **PreQL** in your Dock or on your Desktop. (Tab 2 creates this for you automatically.)
 
 **To get updates (~every 6–8 weeks):**
 
