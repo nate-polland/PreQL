@@ -1,4 +1,4 @@
-# Text-to-SQL Agent
+# PreQL
 
 A conversational BigQuery SQL agent for CreditKarma analysts and PMs. Ask a question in plain English, get back validated SQL with a plain-English summary.
 
@@ -40,7 +40,7 @@ gcloud auth login
 
 ### 4. Open this folder in Claude Code
 ```bash
-cd path/to/Text-to-SQL
+cd path/to/PreQL
 claude
 ```
 
@@ -49,7 +49,7 @@ claude
 ## Repository Structure
 
 ```
-Text-to-SQL/
+PreQL/
 ├── CLAUDE.md                          # Orchestration instructions (restricted — see CONTRIBUTING.md)
 ├── README.md                          # This file
 ├── CONTRIBUTING.md                    # How to contribute

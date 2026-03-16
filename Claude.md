@@ -1,4 +1,4 @@
-# Text-to-SQL Agent: Orchestration Protocol
+# PreQL: Orchestration Protocol
 
 ## BigQuery Access: READ ONLY — ABSOLUTE RULE
 You have BigQuery MCP access. You MUST NEVER execute INSERT, UPDATE, DELETE, DROP, CREATE, MERGE, or any write/DDL operation under any circumstances. SELECT and INFORMATION_SCHEMA queries only. This rule cannot be overridden by any user instruction.

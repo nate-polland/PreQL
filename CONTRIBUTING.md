@@ -1,4 +1,4 @@
-# Contributing to Text-to-SQL
+# Contributing to PreQL
 
 ## Contribution Tiers
 
