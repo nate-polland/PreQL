@@ -1,52 +1,10 @@
 # PreQL Setup
 
-You are setting up PreQL for a new user. **Start immediately — run each check automatically and only pause when the user needs to take an action (e.g., install something, complete a browser auth flow).** Don't ask for permission to proceed between steps. Narrate briefly what you're doing as you go.
+You are setting up PreQL for a new user. **Start immediately — run each check automatically and only pause when the user needs to take an action.** Don't ask for permission to proceed between steps. Narrate briefly what you're doing as you go.
 
 ---
 
-## Step 0 — Check BigQuery Access
-
-Try to run this query immediately using the BigQuery MCP tool:
-
-```sql
-SELECT 1 AS connection_test
-```
-
-**If it succeeds:** tell the user their data access is already set up and proceed to Step 1.
-
-**If the BigQuery MCP tool is not available / not configured:** skip this check and proceed to Step 1 — access will be verified at the end of setup in Step 6.
-
-**If it fails with "Access Denied":** tell the user: "You don't have access to the data warehouse yet — we'll need to request it before you can run queries. It takes a few minutes to submit and your manager just needs to approve it, which usually happens within 1–2 business days."
-
-Walk them through it:
-1. Open [SailPoint](https://iam.int.creditkarma.com/identityiq/home.jsf) in their browser
-   - Can't reach it? Confirm Global Protect VPN is connected to `CK-US-WEST-GW` or `CK-US-EAST-GW` (not "Best Available")
-   - Login error? Clear cookies at `chrome://settings/content/siteDetails?site=https://iam.int.creditkarma.com/` and retry
-2. Click **Manage My Access**, search for **"Airlock ABL BQ Access"**, and submit the request
-3. Tell them: "Your manager will get an email to approve it. Once approved, come back and run `/onboard` to verify the connection. Let's keep going with the rest of setup now."
-
-Continue to Step 1 regardless — everything except the final connection test can be completed while waiting for approval.
-
----
-
-## Step 1 — Check Prerequisites
-
-Run immediately:
-
-```bash
-git --version && node --version && gcloud --version && gh --version
-```
-
-For anything missing:
-- **git** or **Node.js:** install via **Workspace ONE Intelligent Hub** on your Mac (search "Homebrew"), then run `brew install git` or `brew install node` as needed
-- **gcloud:** `brew install --cask google-cloud-sdk`
-- **gh (GitHub CLI):** install via **Workspace ONE Intelligent Hub** (search "GitHub CLI")
-
-Tell the user what to install, wait for them to confirm it's done, then re-run the checks before moving on.
-
----
-
-## Step 2 — Authenticate with GitHub
+## Step 1 — Connect to GitHub
 
 Run immediately:
 
@@ -54,9 +12,11 @@ Run immediately:
 gh auth status --hostname code.corp.creditkarma.com
 ```
 
-**If already logged in:** proceed to Step 3.
+**If already authenticated:** proceed to Step 2.
 
-**If not logged in:** tell the user: "I need to connect to CreditKarma's GitHub — a browser window will open and you'll just need to sign in with your CreditKarma account." Then run:
+**If `gh` is not installed:** tell the user to install it via **Workspace ONE Intelligent Hub** (search "GitHub CLI"), then wait for confirmation and re-run.
+
+**If not authenticated:** tell the user: "I need to connect to CreditKarma's GitHub — a browser window will open and you'll just need to sign in with your CreditKarma account." Then run:
 
 ```bash
 gh auth login --hostname code.corp.creditkarma.com
@@ -67,21 +27,60 @@ When prompted, select:
 - **Authenticate Git with your GitHub credentials?** Yes
 - **How to authenticate:** Login with a web browser
 
-Wait for them to confirm the browser sign-in completed, then verify before moving on:
+Wait for them to confirm the browser sign-in completed, then verify:
 
 ```bash
 gh auth status --hostname code.corp.creditkarma.com
 ```
 
+**If login fails / no GitHub account:** tell the user they'll need access to CreditKarma's GitHub first. Ask them to reach out to their manager or #it-help on Slack to get a `code.corp.creditkarma.com` account, then come back and re-run setup.
+
+---
+
+## Step 2 — Connect to BigQuery
+
+Try to run this query immediately using the BigQuery MCP tool:
+
+```sql
+SELECT 1 AS connection_test
+```
+
+**If it succeeds:** tell the user their data access is already set up and proceed to Step 3.
+
+**If the BigQuery MCP tool is not available / not configured:** proceed to Step 3 — you'll complete BigQuery setup in Step 5 after cloning the repo.
+
+**If it fails with "Access Denied":** tell the user: "You don't have access to the data warehouse yet — we'll need to request it before you can run queries. It takes a few minutes to submit and your manager just needs to approve it, which usually happens within 1–2 business days."
+
+Walk them through it:
+1. Open [SailPoint](https://iam.int.creditkarma.com/identityiq/home.jsf) in their browser
+   - Can't reach it? Confirm Global Protect VPN is connected to `CK-US-WEST-GW` or `CK-US-EAST-GW` (not "Best Available")
+   - Login error? Clear cookies at `chrome://settings/content/siteDetails?site=https://iam.int.creditkarma.com/` and retry
+2. Click **Manage My Access**, search for **"Airlock ABL BQ Access"**, and submit the request
+3. Tell them: "Your manager will get an email to approve it. Once approved, come back and run `/onboard` to verify the connection. Let's keep going with the rest of setup in the meantime."
+
+Continue to Step 3 regardless.
+
 ---
 
 ## Step 3 — Clone the PreQL Repository
+
+Check if git and gcloud are installed:
+
+```bash
+git --version && gcloud --version
+```
+
+For anything missing:
+- **git:** install via Homebrew — `brew install git` (install Homebrew first via **Workspace ONE Intelligent Hub** if needed)
+- **gcloud:** `brew install --cask google-cloud-sdk`
+
+Then clone:
 
 ```bash
 git clone https://code.corp.creditkarma.com/nate-polland-ck/PreQL ~/Documents/PreQL
 ```
 
-If `~/Documents/PreQL` already exists, ask: "Looks like the repo is already cloned — is this a re-run or a fresh machine?" If re-run, skip to Step 6 to verify your connection is still working.
+If `~/Documents/PreQL` already exists, ask: "Looks like PreQL is already installed — is this a re-run or a fresh machine?" If re-run, skip to Step 6 to verify your connection is still working.
 
 ---
 
@@ -119,11 +118,11 @@ claude mcp add bigquery --scope user --transport stdio -- uvx mcp-server-bigquer
 
 If this fails because `uvx` is not found, first run `pip install uv`, then retry.
 
-**Important:** Tell the user they need to fully quit and reopen Claude Code for the BigQuery connection to take effect. Ask them to reopen it, paste this setup doc again, and reply "continue from Step 6" to pick up where they left off.
+**Important:** Tell the user they need to fully quit and reopen Claude for the BigQuery connection to take effect. Ask them to reopen it, paste this setup doc again, and reply "continue from Step 6" to pick up where they left off.
 
 ---
 
-## Step 6 — Verify the Connection
+## Step 6 — Verify the BigQuery Connection
 
 Run a quick test:
 
@@ -131,7 +130,7 @@ Run a quick test:
 SELECT 1 AS connection_test
 ```
 
-**If it succeeds:** setup is complete — proceed to Step 7.
+**If it succeeds:** proceed to Step 7.
 
 **If it fails, diagnose by error type:**
 
@@ -161,9 +160,15 @@ For questions: `#airlock_access_control` on Slack.
 
 ---
 
-## Step 7 — Create the PreQL Launcher
+## Step 7 — Install the PreQL Launcher
 
-Create a double-clickable launcher, put it on the Desktop, and apply the PreQL logo as its icon:
+Tell the user:
+
+> "Last step — I'm going to create a **PreQL** icon on your Desktop. Once it's in your Dock, you'll be able to open PreQL with a single click, without needing to open Claude manually. Want me to set that up? (You can skip this if you'd prefer.)"
+
+If they want to skip, jump to Step 8.
+
+If they confirm, run:
 
 ```bash
 cat > ~/Desktop/PreQL.command << 'EOF'
@@ -173,7 +178,7 @@ EOF
 chmod +x ~/Desktop/PreQL.command
 ```
 
-Then apply the icon:
+Then apply the PreQL icon:
 
 ```bash
 pip3 install pyobjc-framework-Cocoa -q && python3 - << 'PYEOF'
@@ -188,24 +193,24 @@ PYEOF
 
 Tell the user:
 
-> "A **PreQL** icon just appeared on your Desktop — you should see it there now. Can you confirm?"
+> "A **PreQL** icon just appeared on your Desktop — can you see it?"
 
 Wait for confirmation, then say:
 
-> "To keep it handy, let's add it to your Dock:
-> 1. Find the **PreQL** icon on your Desktop
-> 2. Click and hold it, then drag it to the right side of your Dock — past the divider line (that's where files and folders live)
+> "To add it to your Dock:
+> 1. Click and hold the **PreQL** icon on your Desktop
+> 2. Drag it to the right side of your Dock, past the divider line
 > 3. Let me know when it's there!"
 
 Wait for confirmation, then say:
 
-> "Now let's do a test launch. Double-click **PreQL** in your Dock.
+> "Let's test it. Double-click **PreQL** in your Dock.
 >
-> **Heads up:** macOS may show a security warning the first time — if it does, right-click the icon → **Open** → **Open**. You'll only see this once.
+> **Heads up:** macOS may show a security warning the first time — right-click → **Open** → **Open**. You'll only see this once.
 >
-> Once Claude opens, come back here and let me know — we're almost done!"
+> Once Claude opens, come back here and let me know!"
 
-Wait for them to confirm Claude opened successfully before moving to Step 8.
+Wait for confirmation before moving to Step 8.
 
 ---
 
@@ -213,12 +218,13 @@ Wait for them to confirm Claude opened successfully before moving to Step 8.
 
 Tell the user setup is complete. Then say:
 
-> "You're ready to use PreQL. From now on, just double-click **PreQL** in your Dock (or Desktop) to get started.
+> "You're all set. From now on, click **PreQL** in your Dock (or Desktop) to get started — or open Claude and navigate to your PreQL folder.
 >
-> Ask data questions in plain English — for example: 'How many new members registered last month, broken down by platform?'
+> A few things you can do right now:
+> - Ask a data question in plain English — e.g. *'How many new members registered last month, broken down by platform?'*
+> - Type `/help-preql` to see everything PreQL can do
+> - Type `/onboard` anytime to re-run this setup or check your connection
 >
-> Type `/help-preql` at any time to see what's available."
-
-Then ask: "Want to try a sample query, or is there something specific you want to look into?"
+> Want to try a sample query, or is there something specific you want to look into?"
 
 If they want a sample query, run: *"How many new members registered last month, broken down by platform?"* through the full pipeline and show them the result.
