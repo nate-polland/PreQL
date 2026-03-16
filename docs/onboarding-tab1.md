@@ -30,29 +30,9 @@ PreQL has three core functions:
 
 ## Getting started
 
-**Before you begin (one-time, ~15 min):**
-
-1. Complete the **GenAI Tools for our Workforce** training — this gates access to Claude.
-2. Install **Homebrew** and **Claude** via Workspace ONE Intelligent Hub (search "Homebrew" and "Claude").
-
-**Then:**
-
-1. Open Claude
-2. Copy the contents of **Tab 2** and paste it into the chat
-3. Claude walks you through the rest automatically
-
-**To launch PreQL after setup:**
-
-Tab 2 creates a **PreQL** icon on your Desktop automatically. To add it to your Dock: drag it to the right side of the Dock, past the divider line. From then on, just click it to open PreQL.
-
-**First launch only:** macOS may show a security warning — right-click → **Open** → **Open** to get past it. You won't see it again.
-
-**To get updates (~every 6–8 weeks):**
-
-Open Terminal and run:
-```
-cd ~/Documents/PreQL && git pull
-```
+1. Install **Claude** via Workspace ONE Intelligent Hub (search "Claude")
+2. Open Claude
+3. Copy the contents of **Tab 2** and paste it into the chat — Claude handles the rest
 
 ---
 
