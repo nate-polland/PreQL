@@ -161,13 +161,35 @@ For questions: `#airlock_access_control` on Slack.
 
 ---
 
-## Step 7 — Done
+## Step 7 — Set Up the `preql` Shortcut
+
+Add a shell alias so the user can launch PreQL from anywhere by just typing `preql`:
+
+```bash
+echo '\nalias preql="cd ~/Documents/PreQL && claude"' >> ~/.zshrc && source ~/.zshrc
+```
+
+Confirm it worked:
+
+```bash
+type preql
+```
+
+If output shows `preql is an alias`, tell the user: "You can now launch PreQL anytime by opening Terminal and typing `preql`."
+
+If their shell is `bash` instead of `zsh` (rare on Macs), use `~/.bashrc` instead.
+
+---
+
+## Step 8 — Done
 
 Tell the user setup is complete. Then say:
 
-> "You're ready to use PreQL. Ask data questions in plain English — for example: 'How many new members registered last month, broken down by platform?'
+> "You're ready to use PreQL. From now on, just open Terminal and type `preql` to get started.
 >
-> Type `/help-preql` at any time to see what's available. Type `/onboard` for a guided walkthrough."
+> Ask data questions in plain English — for example: 'How many new members registered last month, broken down by platform?'
+>
+> Type `/help-preql` at any time to see what's available."
 
 Then ask: "Want to try a sample query, or is there something specific you want to look into?"
 

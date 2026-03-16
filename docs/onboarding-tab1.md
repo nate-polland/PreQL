@@ -41,6 +41,17 @@ PreQL has three core functions:
 2. Copy the contents of **Tab 2** and paste it into the chat
 3. Claude walks you through the rest automatically
 
+**To launch PreQL after setup:**
+
+Open Terminal and type `preql`. (Tab 2 sets this up for you — it's a shortcut that opens Claude Code in the right place.)
+
+**To get updates (~every 6–8 weeks):**
+
+Open Terminal and run:
+```
+cd ~/Documents/PreQL && git pull
+```
+
 ---
 
 ## Questions?
