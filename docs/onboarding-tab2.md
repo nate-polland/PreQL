@@ -186,9 +186,26 @@ print("Icon applied.")
 PYEOF
 ```
 
-Tell the user: "A **PreQL** icon just appeared on your Desktop. Double-click it anytime to open PreQL directly in Claude. To keep it handy, drag it to your Dock — it goes on the right side of the divider line."
+Tell the user:
 
-**First launch note:** macOS may show a warning the first time. Tell the user to **right-click → Open → Open** to get past it — they only need to do this once.
+> "A **PreQL** icon just appeared on your Desktop — you should see it there now. Can you confirm?"
+
+Wait for confirmation, then say:
+
+> "To keep it handy, let's add it to your Dock:
+> 1. Find the **PreQL** icon on your Desktop
+> 2. Click and hold it, then drag it to the right side of your Dock — past the divider line (that's where files and folders live)
+> 3. Let me know when it's there!"
+
+Wait for confirmation, then say:
+
+> "Now let's do a test launch. Double-click **PreQL** in your Dock.
+>
+> **Heads up:** macOS may show a security warning the first time — if it does, right-click the icon → **Open** → **Open**. You'll only see this once.
+>
+> Once Claude opens, come back here and let me know — we're almost done!"
+
+Wait for them to confirm Claude opened successfully before moving to Step 8.
 
 ---
 
