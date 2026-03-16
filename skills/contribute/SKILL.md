@@ -36,7 +36,7 @@ For new files only (no edits to existing core files):
 
 1. **Check for collisions first.** Pull latest and check if any of the new files already exist on `main`:
    ```bash
-   cd ~/Documents/PreQL
+   cd ~/Documents/Claude\ Code/PreQL
    git fetch origin
    git diff --name-only HEAD origin/main
    ```
@@ -79,7 +79,7 @@ For edits to existing files or any changes to `Context/`, `Agents/`, or `skills/
 
 2. Create a branch:
    ```bash
-   cd ~/Documents/PreQL
+   cd ~/Documents/Claude\ Code/PreQL
    git checkout -b [branch-name]
    ```
    Use a descriptive branch name (e.g., `update-darwin-schema`, `fix-revenue-aging-context`).
