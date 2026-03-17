@@ -1,3 +1,8 @@
+---
+status: finalized
+last_validated: 2026-03-13
+---
+
 # Schema: Consent Data (Opt-In ETL)
 
 **Table:** `prod-ck-abl-data-53.service_bus_streaming_etl.usermanagement_opt_in_etl`

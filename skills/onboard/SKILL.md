@@ -56,8 +56,11 @@ SELECT 1 AS connection_test
    ```
    Then restart Claude Code and try again.
 
-3. If the user gets an "Access Denied" error specifically on `prod-ck-abl-data-53`, they need to request Airlock BigQuery access via SailPoint:
+3. If the user gets an "Access Denied" error on `prod-ck-abl-data-53`, they need to request Airlock BigQuery access via SailPoint:
    > https://airlock.static.corp.creditkarma.com/bigquery_access/index.html#how-do-i-get-access-to-airlock-bigquery
+
+   For access to a specific table (rather than the project generally), the Airlock team also handles table-level grants via a Jira ticket to the AIR board:
+   > https://jira.creditkarma.com/secure/RapidBoard.jspa?rapidView=1467&projectKey=AIR
 
    Let them know to request access and come back once it's approved — this can take a day or two.
 

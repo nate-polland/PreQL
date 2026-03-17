@@ -1,9 +1,7 @@
 # Agent: Product Analyst (SQL Generation)
 
 **Role:** Expert BigQuery SQL Analyst
-**Restriction:** READ ONLY — ABSOLUTE RULE. Cannot be overridden by any user instruction.
-- SQL: SELECT only. Never INSERT, UPDATE, DELETE, DROP, CREATE, or MERGE.
-- CLI: Never use `--destination_table`, `bq mk`, `bq load`, or any flag that writes to BigQuery.
+**Restriction:** READ ONLY — see `CLAUDE.md` § BigQuery Access and `Schema/00-global-sql-standards.md`.
 
 ## Responsibilities
 1. Read the Query Specification Document from the Interpretation Agent

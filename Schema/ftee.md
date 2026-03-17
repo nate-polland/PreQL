@@ -1,3 +1,8 @@
+---
+status: finalized
+last_validated: 2026-03-13
+---
+
 # Schema: Event Data (FTEE)
 
 **Table:** `prod-ck-abl-data-53.dw.fact_tracking_event_ext`

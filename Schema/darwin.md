@@ -1,3 +1,8 @@
+---
+status: finalized
+last_validated: 2026-03-13
+---
+
 # Schema: Experimentation Data (Darwin)
 
 **Table:** `prod-ck-abl-data-53.dwdarwinviews_standard.mt_final_{EXPERIMENT_ID}`

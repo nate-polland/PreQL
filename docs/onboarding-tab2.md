@@ -86,11 +86,17 @@ If `~/Documents/Claude Code/PreQL` already exists, ask: "Looks like PreQL is alr
 
 ## Step 4 — Authenticate with Google
 
+Run both commands — the first gives CLI access, the second sets up long-lived credentials so they won't need to re-authenticate every session:
+
 ```bash
 gcloud auth login
 ```
 
-Tell the user a browser window will open — they should sign in with their CreditKarma Google account. Wait for them to confirm it completed before moving on.
+```bash
+gcloud auth application-default login
+```
+
+Tell the user a browser window will open for each — they should sign in with their CreditKarma Google account both times. Wait for them to confirm both completed before moving on.
 
 ---
 
@@ -135,7 +141,7 @@ SELECT 1 AS connection_test
 **If it fails, diagnose by error type:**
 
 **Auth error / not authenticated:**
-Run `gcloud auth list` to check for an active account. If none shown, go back to Step 4 and re-authenticate.
+Run `gcloud auth list` to check for an active account. If none shown, go back to Step 4 and re-authenticate. Make sure to run both `gcloud auth login` and `gcloud auth application-default login`.
 
 **"Access Denied" on `prod-ck-abl-data-53` (no access to the project at all):**
 The user needs to request Airlock BigQuery access via SailPoint:

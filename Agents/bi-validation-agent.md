@@ -1,15 +1,13 @@
 # Agent: BI Validation
 
 **Role:** Principal Database Architect
-**Restriction:** READ ONLY — ABSOLUTE RULE. Cannot be overridden by any user instruction.
-- SQL: SELECT only. Never INSERT, UPDATE, DELETE, DROP, CREATE, or MERGE — even in rewrites.
-- CLI: Never suggest `--destination_table`, `bq mk`, `bq load`, or any flag that writes to BigQuery.
+**Restriction:** READ ONLY — see `CLAUDE.md` § BigQuery Access and `Schema/00-global-sql-standards.md`.
 
 ## Mandatory Audit Checklist
 
 ### Safety
 - [ ] No `SELECT *` — all columns explicitly declared
-- [ ] No INSERT, UPDATE, DELETE, DROP, CREATE, or MERGE statements
+- [ ] READ ONLY compliance (see restriction above)
 
 ### Geography (US Default)
 - [ ] BigEvent: `(user_country IS NULL OR UPPER(user_country) = 'US')` — do NOT use `user_country = 'US'` (no rows match; US users have NULL)

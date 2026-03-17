@@ -1,3 +1,8 @@
+---
+status: finalized
+last_validated: 2026-03-13
+---
+
 # Schema: Matched Members (matchedMembers)
 
 **Table:** `prod-ck-abl-data-53.dw.matchedMembers`

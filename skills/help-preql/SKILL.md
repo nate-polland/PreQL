@@ -77,10 +77,9 @@ If you document a new table or funnel, it can be shared with the whole team via 
 
 ## Keeping PreQL Up to Date
 
-New schemas, funnels, and skills get added regularly. Run `git pull` in the PreQL directory every 6–8 weeks to pull in the latest:
+New schemas, funnels, and skills get added regularly. Run `/sync` to pull the latest safely — it handles local changes, conflicts, and re-links any new skills automatically.
 
+You can also pull manually if you prefer:
 ```bash
-cd ~/Documents/Claude\ Code/PreQL && git pull
+cd ~/Documents/Claude\ Code/PreQL && git pull && bash scripts/install-skills.sh
 ```
-
-No need to re-run the install script — skills update automatically via symlinks.

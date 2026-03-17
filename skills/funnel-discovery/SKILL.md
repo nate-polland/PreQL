@@ -86,16 +86,67 @@ Start with 1–2 users. Build their full per-user ordered event sequences. Under
 2. **Establish end points** — the completion event, plus all dropout points
 3. **Build per-user ordered paths** — pull all events ordered by timestamp. Do NOT aggregate first — you lose the sequential structure.
 4. **Derive step-to-step transitions** — from per-user paths, extract every consecutive step pair (A → B). This produces the directed graph.
-5. **Investigate rare paths before discarding** — a single-user path in a small sample may represent a real segment at scale, a query artifact, or a tracking gap. Walk the raw sequence to determine which.
+5. **Investigate rare paths before discarding** — a single-user path in a small sample may represent a real segment at scale, a query artifact, or a tracking gap. Walk the raw sequence to determine which. **Never apply an inclusion/exclusion threshold silently.** Present all findings to the user with their volumes and let them decide what to include or exclude from the flowchart.
 6. **Disambiguate user types with the user** — never assume user types based on path length. Ask what distinguishes new vs returning users (e.g., a TOS screen, a specific flag, absence of numericId). Validate that distinguishing events actually appear in data.
-7. **Visualize as a flowchart** — generate a directed graph using Python (`graphviz`). Use `splines=true` with `xlabel` for edge labels. Use `rank=same` subgraphs for row control. Always `open` the rendered image in Preview for the user to review.
+7. **Visualize as a flowchart** — write a Mermaid `flowchart TD` diagram and render it via a local HTML file. Do NOT use graphviz or Python for visualization.
+
+   **Rendering:** Create `Funnels/[funnel-name]-flowchart.html` containing the Mermaid diagram with the CDN script (`https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js`). Open with `open "path/to/file.html"` — this opens in the user's default browser without requiring a dev server or Chrome MCP.
+
+   **Color-code every node by type** using `classDef`:
+   ```
+   classDef frontend fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+   classDef backend fill:#fef3c7,stroke:#f59e0b,color:#78350f
+   classDef drop fill:#fee2e2,stroke:#ef4444,color:#7f1d1d
+   classDef completion fill:#dcfce7,stroke:#22c55e,color:#14532d
+   ```
+   Include a matching HTML legend above the diagram.
+
+   **Classification rule — default to frontend:**
+   - **Frontend (blue):** any step where the user sees a screen, enters data, or makes a choice — classify as frontend even if a backend table also tracks the event
+   - **Backend (amber):** steps with no user-facing screen — system decisions, vendor API calls, record creation
+   - **Drop (red):** all drop-off nodes; use stadium shape `(["Drop"])`
+   - **Completion (green):** the single completion node
+
+   **Drop-off nodes:** add an explicit drop branch at every step where users can exit — not just terminal failures. Label the drop edge with the signal that indicates dropout (e.g., error flag name).
+
+   Embed the same Mermaid source in the funnel doc (`.md`) so it renders in markdown viewers. Keep the HTML file in sync with the `.md` source.
 
 Do not pre-filter to completers — dropoffs are the primary insight.
 
-### Stage 2: Validate and expand
+### Stage 2: Enrichment
+
+Before validating the full funnel, investigate every branch where the next screen or outcome is uncertain. Enrichment is targeted: pick a specific branch (e.g., "what happens after a prove fail?"), find users who took that path, and trace their full event sequences.
+
+**Pattern — use pre-aggregated tables to find users, then trace in the event table:**
+If a pre-aggregated or summary table has flags that identify the population for a branch, use those flags to pull user IDs, then query the event table for their full sequences. This is faster and more reliable than trying to identify branch populations from event data alone. The specific tables and IDs depend on the funnel — refer to `Schema/` docs for what's available.
+
+**For each uncertain branch:**
+1. Use the cheapest source to identify 3 users on that branch (summary table flags, event filters, etc.)
+2. Pull their full event time series via async
+3. Document what screens they actually hit — do they match the flowchart? Are there screens missing?
+4. Update the flowchart with findings (add new edges/nodes, relabel existing ones)
+
+**Do not add counts during enrichment.** Counts come after the structure is validated. Adding counts to unvalidated branches creates false confidence.
+
+Repeat until the user confirms all branches are accounted for.
+
+### Stage 3: Full validation
+
+After enrichment, validate the overall funnel structure by sampling random **entry-cohort** users (not completers, not path-stratified). The goal is to catch any screen or path that enrichment missed.
+
+1. Sample N random users who hit the funnel entry point — N should scale with funnel complexity (~100 for a funnel with ~10 distinct paths, enough to surface any path taken by >3% of entrants)
+2. Pull their full event sequences — all screen/step values, not filtered to known screens
+3. Scan for any screen not already in the flowchart
+4. For any new screen found, trace the users who hit it and determine where it fits in the funnel
+
+**Why entry-cohort, not completers:** sampling from completers only reveals screens on completion paths. Users who drop early may encounter screens that completers never see.
+
+**Checkpoint:** present any new screens found to the user. If none, the structure is validated.
+
+### Stage 4: Expand and populate counts
 
 - Expand to a full day, then 3 days — confirm no new paths emerge
-- **Visualize and checkpoint with the user** — render the funnel and present it before counts. Do not proceed to counts until the user confirms structure.
+- **Visualize and checkpoint with the user** — update the HTML flowchart and re-open it before counts. Do not proceed to counts until the user confirms structure.
 - **Define KPIs with the user** before writing measurement queries. At minimum: overall conversion rate (entry → completion). Also ask: step-by-step rates? By user type/path? Trending over time? These answers determine which pattern to use — see `Context/funnel-measurement-patterns.md`.
 - Only then populate with counts (volumes, drop-off rates per step, per path if applicable)
 
@@ -123,7 +174,7 @@ Metadata header:
 created: [date]
 last_validated: [date]
 data_window: [dates used for validation]
-status: active
+status: in_progress
 ---
 ```
 
@@ -182,7 +233,9 @@ Only document the delta — what is structurally different in the test arm vs. c
 - **READ ONLY — ABSOLUTE RULE.** SELECT only. No writes under any circumstances.
 - Always sample cheaply before scaling
 - Start with 1–2 users → validate with 3–4 more → then widen. Never jump to full population first.
-- Investigate rare paths before discarding
+- Investigate rare paths before discarding — and never apply inclusion/exclusion thresholds without asking the user
+- **Augment, don't replace.** When refining or correcting the flowchart, add new structure alongside existing nodes. Never remove a path just because it hasn't been validated yet. If a path is uncertain, label the edge `"⚠️ path not yet validated in data"`. Only remove a path when you have confirmed via data that it does not exist. Funnel discovery is additive until proven otherwise.
+- **Keep `.md` and `.html` tightly coupled.** Every flowchart edit must update both `Funnels/[funnel-name]-flowchart.html` and the embedded Mermaid in `Funnels/[funnel-name].md` in the same pass. Never let one drift from the other.
 - For pre-aggregated tables: binary flag patterns show what paths were hit, but go to the underlying event table for per-user timestamps and ordering
 - When tracing cross-auth sessions: identify which session identifier persists across the auth boundary (e.g., cookieId). A new session ID (traceId) is typically created at authentication AND at page reloads/errors — TOS and other pre-auth steps may be on a different session ID than the completion event. A traceId change is NOT automatically a dropout — check whether the cookieId is shared and the time gap is consistent with a reload. Stitch via cookieId to connect the full journey.
 - Document everything to Funnels/ so future queries work without re-exploration

@@ -5,7 +5,7 @@ You have BigQuery MCP access. You MUST NEVER execute INSERT, UPDATE, DELETE, DRO
 
 This also applies to the `bq` CLI — never use `--destination_table`, `bq mk`, `bq load`, or any flag or command that implies writing data to BigQuery. `bq query --async` without a destination table is permitted (results go to BQ's anonymous temp table, no write access required on our end).
 
-**Authentication:** `bq` CLI uses `gcloud auth login` credentials (not `application-default`). If auth fails, user must run `gcloud auth login` interactively in their terminal. Tokens auto-refresh and do not expire under normal use.
+**Authentication:** `bq` CLI uses `gcloud auth application-default login` credentials. If auth fails, user must run both `gcloud auth login` and `gcloud auth application-default login` interactively in their terminal. Application-default credentials auto-refresh and rarely expire.
 
 ## Query Execution: MCP vs Async
 The BigQuery MCP connection has a ~60s timeout. Queries that join BigEvent by non-partition keys (e.g. `user_traceId`, `user_dwNumericId`) or span multiple days will time out.
@@ -15,7 +15,7 @@ The BigQuery MCP connection has a ~60s timeout. Queries that join BigEvent by no
 **Use `bq_async.sh` (Bash) for:** any query touching BigEvent with a join, multi-CTE funnels, or anything likely to take >30s.
 
 Async workflow:
-1. Submit: `./bq_async.sh "<SQL>"` — no destination table needed; BQ holds results in a temp table for 24h
+1. Submit: `./bq_async.sh "<SQL>"` — no destination table needed; BQ holds results in a temp table for 24h.
 2. Script monitors for 60s — if done, prints results directly via `bq head`
 3. If not done after 60s: job ID saved to `/tmp/bq_last_job.txt`. Tell the user to ask you to check in when ready.
 4. To check: `./bq_async.sh --check` (uses last job ID automatically)
@@ -74,6 +74,29 @@ Rules:
 - Keep content concise and command-focused — remove verbose prose
 - Never edit `CLAUDE.md` unless the user explicitly requests an orchestration change
 - Delete files that are no longer needed — don't accumulate deprecated stubs. Always confirm with the user before deleting a file.
+
+---
+
+## Static HTML Files
+
+Funnel flowcharts and other static HTML files (e.g. `Funnels/*.html`) are opened directly with `open <path>`. Never use `preview_start` for these — they are not dev server projects.
+
+## Session Start Protocol
+
+At the start of every conversation (including resumed/compacted ones), before generating any SQL or analysis:
+
+1. **Read `session.md`** — it lists the active funnel docs, schema files, and a running log of changes made in recent sessions. Load every file listed under "Active Docs".
+2. **If the topic involves a known funnel:** read the `Funnels/` doc for that funnel before doing anything else. Do not rely on conversation summaries as a substitute for the source file.
+3. **If the topic involves BigEvent or SRRF queries:** read `Schema/be.md` and/or `Schema/srrf.md` before writing any SQL.
+
+## Session Continuity
+
+Keep `session.md` up to date throughout the conversation:
+- When a new funnel doc, schema, or context file becomes relevant, add it to "Active Docs".
+- After every confirmed change to a file (schema update, funnel doc edit, new finding written back), append a one-line entry to "Changes This Session".
+- At natural pause points (end of a topic, before context may compress), verify `session.md` reflects the current state.
+
+`session.md` is the handoff note between sessions. It is not a full summary — it is a pointer map so the next session can load the right files immediately. It also maintains a session log (newest first): recent sessions get full summaries, older ones get compressed to key findings. Add a new entry at the start of each session; compress older entries as the log grows rather than hard-deleting them — the goal is to retain useful signal from past work even if details are lost. Every entry (including compressed ones) must include a `_Docs used:_` line listing the schema, funnel, and context files referenced that session.
 
 ---
 

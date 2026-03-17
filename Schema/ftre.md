@@ -1,3 +1,8 @@
+---
+status: finalized
+last_validated: 2026-03-13
+---
+
 # Schema: Revenue Data (FTRE)
 
 **Table:** `prod-ck-abl-data-53.dw.fact_tracking_revenue_ext`

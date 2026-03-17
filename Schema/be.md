@@ -1,3 +1,8 @@
+---
+status: finalized
+last_validated: 2026-03-15
+---
+
 # Schema: Behavioral Event Data (BigEvent / BE)
 
 **Table:** `prod-ck-abl-data-53.kafka_sponge.sponge_BigEvent`

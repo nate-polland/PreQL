@@ -1,3 +1,8 @@
+---
+status: finalized
+last_validated: 2026-03-13
+---
+
 # Schema: Daily Activity Data (FDMA)
 
 **Table:** `prod-ck-abl-data-53.dw.fact_member_active_daily`

@@ -4,5 +4,8 @@
 # BigQuery async temp files
 /tmp/bq_last_job.txt
 
+# Per-user session state
+session.md
+
 # macOS
 .DS_Store

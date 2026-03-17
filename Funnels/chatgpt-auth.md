@@ -1,8 +1,8 @@
 ---
 created: 2026-03-15
-last_validated: 2026-03-15
-data_window: 2026-03-10 to 2026-03-12
-status: active
+last_validated: 2026-03-17
+data_window: 2026-03-10 to 2026-03-12 (structure), 2026-01-01+ (counts pending)
+status: in_progress
 ---
 
 # ChatGPT Authentication Funnel
@@ -11,7 +11,7 @@ Users arriving at CK content embedded in ChatGPT start unauthenticated. They mus
 
 ## Completion Anchor
 
-**Primary (recommended):** BigEvent `content_screen = 'link-chatgpt'`, `system_eventType = 2`, `system_eventCode = 'agreeClick'`
+**Primary (recommended):** BigEvent `content_screen IN ('link-chatgpt', 'link-mcp')`, `system_eventType = 2`, `system_eventCode = 'agreeClick'`
 
 **Secondary (unreliable):** `service_bus_streaming_etl.usermanagement_opt_in_etl` where `data.consentInfo.product = 'ChatGPTConsent'` and `data.consentInfo.consentAction = 'Consented'`. Caveat: this table has irregular volume patterns (zero-volume days followed by spikes), suggesting batch writes rather than real-time tracking. Timestamp may reflect write time, not event time. Use BigEvent as the anchor instead.
 
@@ -43,31 +43,111 @@ User-estimated: 5–10 minutes. Current buffer: 15 minutes from first `seamless-
 
 ## User Types
 
-Three distinct user types pass through this funnel:
+Four distinct paths through this funnel, determined by recognition at different stages:
 
-1. **Returning users with verified phone** — existing CK account with a phone on file. System recognizes them during `seamless-registration` and routes to quick phone verify (`ump-phone-verify` → OTP). Minimal friction. **This is the majority of completers.**
+1. **Returning — recognized at OTP** — existing CK account with verified phone. After OTP verify, system recognizes them and skips PII entirely → straight to completion (`link-chatgpt`/`link-mcp`). **This is the majority path (~4,900 of ~7,400 completers).**
 
-2. **Returning users without verified phone** — existing CK account but no verified phone. System collects PII via `shortPersonalInfo` and attempts to match. If matched: redirected to `login-web-redirect` → password login. If match fails: falls into recovery flows with significantly higher friction.
+2. **Returning — recognized at Prove (no TOS)** — PII submitted, Prove API matches to existing account. Skips TOS and login → straight to completion. No intermediate auth screen.
 
-3. **New users** — no CK account. Should go through full `seamless-registration` including PII collection AND a separate TOS acceptance screen (distinct from the ChatGPT consent screen). **⚠️ No new-user completers observed in our sample — see Open Questions.**
+3. **Returning — PII match → login redirect** — PII submitted, matched but requires login. Routed to `login-web-redirect` → password/2FA/recovery screens. Includes UMP sub-path (`ump-phone-verify` → `ump-enter-otc`) for password-disabled accounts.
 
-## Validated User Paths (Mar 10–12, 83+ sessions across 3 days)
+4. **New users** — no CK account. PII → Prove → TOS acceptance (`termsContinue`) → new account created → completion. TOS fires pre-auth on a different traceId — stitch via cookieId.
 
-### Returning User — Verified Phone (majority of completers)
-`seamless-registration` (phone → OTP) → `link-chatgpt` (agreeClick)
-No PII step. System recognizes the phone number and skips straight to consent.
+## Flowchart
 
-### Returning User — Quick Auth via UMP
-`seamless-registration` → `ump-phone-verify` → `ump-enter-otc` → `link-chatgpt` (agreeClick)
+Sources: BE = `sponge_BigEvent`, SRRF = `seamless_registration_raw_funnel`
 
-### Returning User — PII Match → Login Redirect
+```mermaid
+flowchart TD
+    classDef frontend fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+    classDef backend fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    classDef drop fill:#fee2e2,stroke:#ef4444,color:#7f1d1d
+    classDef completion fill:#dcfce7,stroke:#22c55e,color:#14532d
+
+    ENTRY["**Funnel Entry**\nBE: seamless-registration\nfilter: request_refUrl LIKE '%chatgpt%'\n**11,320**"]:::frontend
+
+    ENTRY -->|"~1,100 no OTP activity"| DROP_ENTRY(["Drop"]):::drop
+
+    ENTRY --> PHONE["**Phone Entry**\nseamless-reg / phoneInfoContinue\n📋 pending count"]:::frontend
+    PHONE -->|"phoneInfoContinueSubmitError\n📋 pending count"| DROP_PHONE(["Drop"]):::drop
+
+    PHONE --> OTP["**OTP Verify**\nseamless-reg / phoneVerificationContinue\n📋 pending count"]:::frontend
+    OTP -->|"fail / abandon\n📋 pending count"| DROP_OTP(["Drop"]):::drop
+
+    OTP -->|"returning user\nrecognized via phone — skip PII\n📋 pending count"| CONSENT
+
+    OTP --> NOT_SUPPORTED["**Not Supported**\nlink-chatgpt-not-supported\ncontinueClick → login redirect\n📋 pending count"]:::frontend
+    NOT_SUPPORTED --> LOGIN_REDIR
+
+    OTP --> MCP_TFA["**MCP 2FA Enrolled**\nlink-mcp-twofa-enrolled\n📋 pending count"]:::frontend
+    MCP_TFA --> LOGIN_REDIR
+
+    OTP --> PII["**PII Form**\nseamless-reg / shortPersonalInfo\nshortPersonalInfoContinue\n📋 pending count"]:::frontend
+
+    PII -->|"organic drop\n📋 pending count"| DROP_PII(["Drop"]):::drop
+    PII -->|"matchFailedReturn\n**~818**"| MATCH_FAIL["**Match Fail Recovery**\nreg-step-1 / login-unknown\nmostly drop"]:::frontend
+    MATCH_FAIL -->|"📋 pending count"| DROP_MATCH(["Drop"]):::drop
+
+    PII --> LOGIN_REDIR["**Login Redirect**\nBE: login-web-redirect\n📋 pending count"]:::frontend
+
+    PII --> PROVE["**Prove API Call**\nbackend — SRRF: total_prove_call\n📋 pending count"]:::backend
+    PROVE -->|"prove fail — terminal\nshortPersonalInfoSubmitError + pageLevelError\n📋 pending count"| DROP_PROVE_FAIL(["Drop"]):::drop
+    PROVE -->|"prove fail — retry\nmatchFailedReturn on resubmit\n📋 pending count"| MATCH_FAIL
+    PROVE -->|"Prove success\nreturning user — no TOS\n📋 pending count"| CONSENT
+    PROVE --> TOA["**TOS Acceptance**\nseamless-reg / termsContinue\n📋 pending count\nSRRF: completed_toa = 1\n⚠️ termsContinue ≠ completion\nstitch via cookieId (pre-auth diff traceId)"]:::frontend
+    TOA -->|"organic drop\n📋 pending count"| DROP_TOA(["Drop"]):::drop
+    TOA -->|"termsSubmitError + matchFailedReturn\n(backend match fail at TOS)\n⚠️ rare — ~16 in 90 days"| MATCH_FAIL_TOS["**Login Recovery**\nreg-step-1 → login flow"]:::frontend
+    MATCH_FAIL_TOS -->|"📋 pending count"| DROP_MATCH_TOS(["Drop"]):::drop
+    TOA --> ACCT["**New Account Created**\nSRRF: regLog_account_created=0\n📋 pending count"]:::backend
+    ACCT --> CONSENT
+
+    LOGIN_REDIR -->|"standard path"| AUTH["**Password / 2FA / Recovery**\nlogin-password-options\nlogin-unknown-failed-password\nlogin-verification-option-from-login\nforce-2fa-* / recovery-*\n📋 pending count"]:::frontend
+    AUTH -->|"📋 pending count"| DROP_AUTH(["Drop"]):::drop
+    AUTH --> CONSENT
+
+    LOGIN_REDIR -->|"UMP path\nlogin-unknown-password-disabled-text"| UMP["**UMP Phone Verify**\nump-phone-verify\n**726**"]:::frontend
+    UMP --> UMP_OTC["**Enter OTP**\nump-enter-otc\n**687**"]:::frontend
+    UMP_OTC -->|"39 · OTP fail"| DROP_UMP(["Drop"]):::drop
+    UMP_OTC --> UMP_2FA["**UMP 2FA**\nump-2fa-iframe-container\nump-2fa-success-redirect\n📋 pending count"]:::frontend
+    UMP_2FA --> CONSENT
+    UMP_OTC --> CONSENT
+
+    CONSENT["**Completion**\nBE: link-chatgpt / link-mcp\nagreeClick\n**7,408**"]:::completion
+```
+
+## Validated User Paths (Mar 10–12 + enrichment Mar 17)
+
+### Returning — Recognized at OTP (majority path)
+`seamless-registration` (phone → OTP) → `link-chatgpt`/`link-mcp` (agreeClick)
+No PII step. System recognizes the phone number and skips straight to consent. ~4,900 of ~7,400 completers.
+
+### Returning — Prove Success (no TOS)
+`seamless-registration` (shortPersonalInfo → PII submit) → Prove API matches → `link-chatgpt` (agreeClick)
+No login redirect, no auth screens. Backend Prove matches identity and skips TOS. Validated for 2/3 SRRF prove-success returning users.
+
+### Returning — PII Match → Login Redirect
 `seamless-registration` (shortPersonalInfo) → `login-web-redirect` → `login-password-options` (submit) → `link-chatgpt` (agreeClick)
 
-### Returning User — Forced 2FA (rare, valid)
+### Returning — UMP (password-disabled)
+`seamless-registration` → `login-web-redirect` → `login-unknown-password-disabled-text` → `ump-phone-verify` → `ump-enter-otc` → `link-chatgpt` (agreeClick)
+UMP is inside login-web-redirect, not a parallel entry branch.
+
+### Returning — Forced 2FA (rare, valid)
 `seamless-registration` → `login-web-redirect` → `login-password-options` → `force-2fa-phone-check` → `force-2fa-new-phone` → `force-2fa-verify-email-otc` → `force-2fa-verify-new-phone-otc` → `link-chatgpt` (agreeClick)
 
-### Identity Match Failure (rare, drops off)
-`seamless-registration` (DOB validation error → termsSubmitError → matchFailedReturn) → `reg-step-1` → `login-unknown` → `login-unknown-password-disabled-text` → phone/email OTC attempts → **drop**
+### New User — Prove Success → TOS → Account Created
+`seamless-registration` (shortPersonalInfo) → Prove API → `termsContinue` (pre-auth, diff traceId) → new account created → `link-chatgpt`/`link-mcp` (agreeClick)
+Stitch via cookieId across auth boundary.
+
+### MCP 2FA Enrolled
+`seamless-registration` → OTP → `link-mcp-twofa-enrolled` (continueClick) → `login-web-redirect` → auth screens → completion
+
+### Identity Match Failure (drops off)
+`seamless-registration` (matchFailedReturn) → `reg-step-1` → `login-unknown` → `login-unknown-password-disabled-text` → phone/email OTC attempts → **drop**
+Also reachable via Prove fail retry: prove fail → user retries PII → matchFailedReturn → same recovery flow.
+
+### TOS Match Failure (rare — ~16 in 90 days)
+`seamless-registration` → Prove → `termsContinue` → termsSubmitError + matchFailedReturn → `reg-step-1` → login flow → **mostly drop**
 
 ### Account Recovery Loop (rare, drops off)
 `seamless-registration` → `login-web-redirect` → `login-unknown-step-1-dup` → `recovery-newphone-phone` ↔ `recovery-newphone-code` (repeated failures) → `login-acct-look-up` → `login-verification-option` → **drop** or loop back to start
@@ -78,6 +158,11 @@ No PII step. System recognizes the phone number and skips straight to consent.
 |---|---|---|
 | `seamless-registration` | Multi-step: phone entry, OTP, shortPersonalInfo, DOB, terms | All (entry point) |
 | `link-chatgpt` | "Allow CK to connect to ChatGPT" — Agree/Cancel | All (completion) |
+| `link-mcp` | Second completion screen (same agreeClick consent) | All (completion) |
+| `link-mcp-twofa-enrolled` | 2FA enrollment screen — has continueClick/cancelClick | OTP → Login Redirect path |
+| `link-chatgpt-not-supported` | Ineligibility gate — continueClick routes to login redirect | OTP → Login Redirect (4% of entry cohort) |
+| `ump-2fa-iframe-container` | UMP 2FA iframe for phone verification | UMP path |
+| `ump-2fa-success-redirect` | UMP 2FA success redirect | UMP path |
 | `ump-phone-verify` | Phone number entry for existing users | Returning (verified phone) |
 | `ump-enter-otc` | OTP code entry for existing users | Returning (verified phone) |
 | `login-web-redirect` | Redirect to login after PII match | Returning (no verified phone) |
@@ -101,8 +186,21 @@ No PII step. System recognizes the phone number and skips straight to consent.
 | `force-2fa-sending-email-otc` | 2FA email OTC variant | Returning (high-security) |
 | `force-2fa-verify-phone-otc` | 2FA phone OTC variant | Returning (high-security) |
 | `login-enter-otc-from-phone` | Phone OTC entry (login) | Returning (recovery) |
+| `login-unknown-failed-password` | Failed password attempt within login flow | Returning (auth) |
+| `login-verification-option-from-login` | Verification method chooser from login | Returning (auth) |
 | `login-update-password` | Password update screen | Returning (recovery) |
 | `login-verify-identity-birthday-ssn` | Identity verify via DOB/SSN | Returning (recovery) |
+
+## Screens Outside Funnel Scope
+
+The following screens appear in the ChatGPT refUrl cohort but are **not part of the auth funnel** — they are return visits or post-completion app screens that occur days to months after the original funnel session:
+
+| Screen | Why excluded |
+|---|---|
+| `link-anywhere` | Post-completion return visit |
+| `login-seamless-ck-brandshake` | Post-completion return visit |
+| `login-email-auth-factor` | Post-completion return visit |
+| `signup` | Post-completion return visit |
 
 ## Key Funnel Timing (from entry point forward)
 - 0 sec: `seamless-registration` (phone entry)

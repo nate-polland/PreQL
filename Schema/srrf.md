@@ -1,3 +1,8 @@
+---
+status: finalized
+last_validated: 2026-03-15
+---
+
 # Schema: Seamless Registration Raw Funnel (SRRF)
 
 **Table:** `prod-ck-abl-data-53.dw.seamless_registration_raw_funnel`
@@ -36,7 +41,7 @@
 - `prove_verification_pending` (INT64) — DOB + phone sent to Prove vendor for identity verification (triggered when user fails phone/email match)
 - `match_fail` (INT64) — user failed phone/email match; triggers Prove flow
 - `match_fail_clicked` (INT64) — user acknowledged match failure and continued
-- `prove_fail` (INT64) — Prove identity check failed (no profile returned)
+- `prove_fail` (INT64) — Prove identity check failed (no profile returned). ⚠️ **Unreliable:** 0 observed in ChatGPT funnel 3-day sample (2026-03-10 to 2026-03-12) despite known Prove failures. Use alternative signals (`shortPersonalInfoSubmitError` + `pageLevelError` in BE, or `match_fail` in SRRF) instead.
 - `phone_verification_success` (INT64)
 - `completed_toa` (INT64) — Terms of Agreement accepted at end of new account creation flow (post-Prove, pre-account creation); distinct from ChatGPT product consent screen
 - `see_financial_info` (INT64)

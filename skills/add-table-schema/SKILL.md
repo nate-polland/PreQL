@@ -71,7 +71,46 @@ For binary INT64 columns (0/1 flags), never assume the name reflects the meaning
 3. If the flag is inverted, document prominently with ⚠️ and the validation evidence
 4. Flag sibling columns with similar naming patterns as potentially inverted too
 
-## Phase 6 — Write the Schema File
+## Phase 6 — Enrich
+
+After the initial exploration, investigate any field or relationship where the meaning or behavior is uncertain. Enrichment is targeted — pick a specific question (e.g., "does this flag really mean what the name implies?", "what happens when this join key is null?") and find evidence.
+
+**For each uncertain field or relationship:**
+1. Identify 3–5 rows that exercise the uncertain behavior (e.g., rows where a flag = 1, rows where a join key is null)
+2. Cross-reference against a related table or ground truth to confirm semantics
+3. Document findings — update the column definition, add a caveat, or flag as inverted
+
+**Common enrichment targets:**
+- Binary flags with ambiguous names → validate against ground truth (Phase 5)
+- Join keys with partial coverage → trace the null population to understand why
+- Timestamp fields → are they event time or write time? Check for batch patterns.
+- Columns that look like they duplicate another table's field → compare values to see if they diverge
+
+Do not skip enrichment to write the schema faster. Wrong definitions are worse than missing ones.
+
+## Phase 7 — Validate
+
+After enrichment, validate the overall schema by sampling random records — not filtered to any specific population or flag value. The goal is to catch field behaviors or patterns that targeted enrichment missed.
+
+**Sample size:** scale with schema complexity. A table with 10 columns and simple grain needs fewer samples than one with 80 columns, multiple join keys, and binary flags.
+
+| Schema complexity | Columns | Flags/joins | Suggested sample |
+|---|---|---|---|
+| Simple | <20 | 0–2 | 10–15 records |
+| Moderate | 20–50 | 3–5 | 25–40 records |
+| Complex | 50+ | 6+ | 50–100 records |
+
+Present the suggested sample size to the user with rationale before running.
+
+**Validation checks:**
+1. Sample N random records (recent date window, no other filters)
+2. For each record, verify that documented fields match their definitions — do flag values align with the cross-referenced ground truth? Do join keys connect as expected?
+3. Look for any column with unexpected values (nulls where coverage was documented as 100%, values outside expected ranges, etc.)
+4. If anything new surfaces, enrich that specific finding before finalizing
+
+**Checkpoint:** present any new findings to the user. If none, the schema is validated.
+
+## Phase 8 — Write the Schema File
 
 File: `Schema/[tablename].md`
 
@@ -88,7 +127,7 @@ Optional sections (add as needed):
 
 **Log every column from INFORMATION_SCHEMA**, even if undescribed. A column name with no definition is still useful — it tells future users the field exists in this table and can be investigated. Do not use a "Fields Not Yet Documented" catch-all — just list them inline with name + type.
 
-## Phase 7 — Update Related Files
+## Phase 9 — Update Related Files
 
 After writing the schema:
 1. If the table introduces new cross-table join patterns, add to `Context/cross-table-joins.md`

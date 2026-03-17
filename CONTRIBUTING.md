@@ -18,9 +18,25 @@ Different file types have different review requirements. The table below defines
 
 ---
 
+## Available Skills
+
+| Skill | Purpose |
+|---|---|
+| `/add-table-schema` | Document a new BigQuery table schema |
+| `/update-table-schema` | Update an existing Schema/ doc (new fields, flag validation, join key changes) |
+| `/funnel-discovery` | Map an unfamiliar product funnel end-to-end |
+| `/update-funnel` | Update an existing Funnels/ doc (new findings, stale flowchart) |
+| `/data-lineage` | Trace where a table comes from and whether it's reliable |
+| `/onboard` | First-time setup — verify BigQuery connection and orientation |
+| `/contribute` | Push local changes back to the PreQL GitHub repo |
+| `/sync` | Pull the latest updates from GitHub, handling local changes and conflicts |
+| `/help-preql` | Overview of what PreQL can do and available commands |
+
+---
+
 ## How to Add a New Table Schema
 
-The fastest path is to use the built-in skill. In Claude Code:
+Use the built-in skill:
 ```
 /add-table-schema
 ```
@@ -83,7 +99,7 @@ PRs without this context will be held until the author can provide it.
 
 ## General Rules
 
-- **Never add write operations.** This agent is read-only. Never add queries with INSERT, UPDATE, DELETE, DROP, or CREATE.
+- **Read-only.** See `CLAUDE.md` § BigQuery Access for the full rule.
 - **Validate before submitting.** Run any SQL you document against real data to confirm it works.
 - **Document the "why".** Future contributors need to understand why a rule exists, not just what it does.
 - **Scope your changes.** Fix one thing per PR. Mixed-purpose PRs are harder to review and easier to reject.
