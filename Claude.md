@@ -85,7 +85,21 @@ Funnel flowcharts and other static HTML files (e.g. `Funnels/*.html`) are opened
 
 At the start of every conversation (including resumed/compacted ones), before generating any SQL or analysis:
 
-1. **Read `session.md`** — it lists the active funnel docs, schema files, and a running log of changes made in recent sessions. Load every file listed under "Active Docs".
+1. **Read `session.md`** — it lists the active funnel docs, schema files, and a running log of changes made in recent sessions. Load every file listed under "Active Docs". If `session.md` doesn't exist, create one:
+   ```markdown
+   # Session State
+
+   ## Active Docs
+
+   | File | Role |
+   |---|---|
+
+   ## Session Log
+
+   Newest first.
+
+   ---
+   ```
 2. **If the topic involves a known funnel:** read the `Funnels/` doc for that funnel before doing anything else. Do not rely on conversation summaries as a substitute for the source file.
 3. **If the topic involves BigEvent or SRRF queries:** read `Schema/be.md` and/or `Schema/srrf.md` before writing any SQL.
 
