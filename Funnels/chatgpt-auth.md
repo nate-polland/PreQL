@@ -1,7 +1,7 @@
 ---
 created: 2026-03-15
 last_validated: 2026-03-17
-data_window: 2026-03-10 to 2026-03-12 (structure), 2026-01-01+ (counts pending)
+data_window: 2026-03-10 to 2026-03-12 (structure), 2026-01-01 to 2026-03-17 (counts)
 status: in_progress
 ---
 
@@ -64,55 +64,55 @@ flowchart TD
     classDef drop fill:#fee2e2,stroke:#ef4444,color:#7f1d1d
     classDef completion fill:#dcfce7,stroke:#22c55e,color:#14532d
 
-    ENTRY["**Funnel Entry**\nBE: seamless-registration\nfilter: request_refUrl LIKE '%chatgpt%'\n**11,320**"]:::frontend
+    ENTRY["**Funnel Entry**\nBE: seamless-registration\nfilter: request_refUrl LIKE '%chatgpt%'\n**11,549**"]:::frontend
 
-    ENTRY -->|"~1,100 no OTP activity"| DROP_ENTRY(["Drop"]):::drop
+    ENTRY -->|"1,124 no OTP activity"| DROP_ENTRY(["Drop"]):::drop
 
-    ENTRY --> PHONE["**Phone Entry**\nseamless-reg / phoneInfoContinue\n📋 pending count"]:::frontend
-    PHONE -->|"phoneInfoContinueSubmitError\n📋 pending count"| DROP_PHONE(["Drop"]):::drop
+    ENTRY --> PHONE["**Phone Entry**\nseamless-reg / phoneInfoContinue\n**11,549**"]:::frontend
+    PHONE -->|"phoneInfoContinueSubmitError\n**588**"| DROP_PHONE(["Drop"]):::drop
 
-    PHONE --> OTP["**OTP Verify**\nseamless-reg / phoneVerificationContinue\n📋 pending count"]:::frontend
-    OTP -->|"fail / abandon\n📋 pending count"| DROP_OTP(["Drop"]):::drop
+    PHONE --> OTP["**OTP Verify**\nseamless-reg / phoneVerificationContinue\n**10,425**"]:::frontend
+    OTP -->|"fail / abandon"| DROP_OTP(["Drop"]):::drop
 
-    OTP -->|"returning user\nrecognized via phone — skip PII\n📋 pending count"| CONSENT
+    OTP -->|"returning user\nrecognized via phone — skip PII\n~73% of OTP"| CONSENT
 
-    OTP --> NOT_SUPPORTED["**Not Supported**\nlink-chatgpt-not-supported\ncontinueClick → login redirect\n📋 pending count"]:::frontend
+    OTP --> NOT_SUPPORTED["**Not Supported**\nlink-chatgpt-not-supported\ncontinueClick → login redirect\n**601**"]:::frontend
     NOT_SUPPORTED --> LOGIN_REDIR
 
-    OTP --> MCP_TFA["**MCP 2FA Enrolled**\nlink-mcp-twofa-enrolled\n📋 pending count"]:::frontend
+    OTP --> MCP_TFA["**MCP 2FA Enrolled**\nlink-mcp-twofa-enrolled\n**380**"]:::frontend
     MCP_TFA --> LOGIN_REDIR
 
-    OTP --> PII["**PII Form**\nseamless-reg / shortPersonalInfo\nshortPersonalInfoContinue\n📋 pending count"]:::frontend
+    OTP --> PII["**PII Form**\nseamless-reg / shortPersonalInfo\nshortPersonalInfoContinue\n**2,543**"]:::frontend
 
-    PII -->|"organic drop\n📋 pending count"| DROP_PII(["Drop"]):::drop
-    PII -->|"matchFailedReturn\n**~818**"| MATCH_FAIL["**Match Fail Recovery**\nreg-step-1 / login-unknown\nmostly drop"]:::frontend
-    MATCH_FAIL -->|"📋 pending count"| DROP_MATCH(["Drop"]):::drop
+    PII -->|"organic drop"| DROP_PII(["Drop"]):::drop
+    PII -->|"matchFailedReturn\n**822**"| MATCH_FAIL["**Match Fail Recovery**\nreg-step-1 / login-unknown\n**922**\nmostly drop"]:::frontend
+    MATCH_FAIL -->|"most drop"| DROP_MATCH(["Drop"]):::drop
 
-    PII --> LOGIN_REDIR["**Login Redirect**\nBE: login-web-redirect\n📋 pending count"]:::frontend
+    PII --> LOGIN_REDIR["**Login Redirect**\nBE: login-web-redirect\n**961**"]:::frontend
 
-    PII --> PROVE["**Prove API Call**\nbackend — SRRF: total_prove_call\n📋 pending count"]:::backend
-    PROVE -->|"prove fail — terminal\nshortPersonalInfoSubmitError + pageLevelError\n📋 pending count"| DROP_PROVE_FAIL(["Drop"]):::drop
-    PROVE -->|"prove fail — retry\nmatchFailedReturn on resubmit\n📋 pending count"| MATCH_FAIL
-    PROVE -->|"Prove success\nreturning user — no TOS\n📋 pending count"| CONSENT
-    PROVE --> TOA["**TOS Acceptance**\nseamless-reg / termsContinue\n📋 pending count\nSRRF: completed_toa = 1\n⚠️ termsContinue ≠ completion\nstitch via cookieId (pre-auth diff traceId)"]:::frontend
-    TOA -->|"organic drop\n📋 pending count"| DROP_TOA(["Drop"]):::drop
+    PII --> PROVE["**Prove API Call**\nbackend — SRRF proxy"]:::backend
+    PROVE -->|"prove fail — terminal\nshortPersonalInfoSubmitError + pageLevelError\n**751**"| DROP_PROVE_FAIL(["Drop"]):::drop
+    PROVE -->|"prove fail — retry\nmatchFailedReturn on resubmit"| MATCH_FAIL
+    PROVE -->|"Prove success\nreturning user — no TOS"| CONSENT
+    PROVE --> TOA["**TOS Acceptance**\nseamless-reg / termsContinue\nSRRF: completed_toa = 1\n**116** (SRRF)\n⚠️ BE termsContinue undercounts\nstitch via cookieId (pre-auth diff traceId)"]:::frontend
+    TOA -->|"organic drop\n**15**"| DROP_TOA(["Drop"]):::drop
     TOA -->|"termsSubmitError + matchFailedReturn\n(backend match fail at TOS)\n⚠️ rare — ~16 in 90 days"| MATCH_FAIL_TOS["**Login Recovery**\nreg-step-1 → login flow"]:::frontend
-    MATCH_FAIL_TOS -->|"📋 pending count"| DROP_MATCH_TOS(["Drop"]):::drop
-    TOA --> ACCT["**New Account Created**\nSRRF: regLog_account_created=0\n📋 pending count"]:::backend
+    MATCH_FAIL_TOS -->|"~16"| DROP_MATCH_TOS(["Drop"]):::drop
+    TOA --> ACCT["**New Account Created**\nSRRF: regLog_account_created=0\n**114**"]:::backend
     ACCT --> CONSENT
 
-    LOGIN_REDIR -->|"standard path"| AUTH["**Password / 2FA / Recovery**\nlogin-password-options\nlogin-unknown-failed-password\nlogin-verification-option-from-login\nforce-2fa-* / recovery-*\n📋 pending count"]:::frontend
-    AUTH -->|"📋 pending count"| DROP_AUTH(["Drop"]):::drop
+    LOGIN_REDIR -->|"standard path"| AUTH["**Password / 2FA / Recovery**\nlogin-password-options\nlogin-unknown-failed-password\nlogin-verification-option-from-login\nforce-2fa-* / recovery-*\n**1,689**"]:::frontend
+    AUTH -->|"auth drop"| DROP_AUTH(["Drop"]):::drop
     AUTH --> CONSENT
 
-    LOGIN_REDIR -->|"UMP path\nlogin-unknown-password-disabled-text"| UMP["**UMP Phone Verify**\nump-phone-verify\n**726**"]:::frontend
-    UMP --> UMP_OTC["**Enter OTP**\nump-enter-otc\n**687**"]:::frontend
-    UMP_OTC -->|"39 · OTP fail"| DROP_UMP(["Drop"]):::drop
-    UMP_OTC --> UMP_2FA["**UMP 2FA**\nump-2fa-iframe-container\nump-2fa-success-redirect\n📋 pending count"]:::frontend
+    LOGIN_REDIR -->|"UMP path\nlogin-unknown-password-disabled-text"| UMP["**UMP Phone Verify**\nump-phone-verify\n**746**"]:::frontend
+    UMP --> UMP_OTC["**Enter OTP**\nump-enter-otc\n**705**"]:::frontend
+    UMP_OTC -->|"41 · OTP fail"| DROP_UMP(["Drop"]):::drop
+    UMP_OTC --> UMP_2FA["**UMP 2FA**\nump-2fa-iframe-container\nump-2fa-success-redirect\n**39**"]:::frontend
     UMP_2FA --> CONSENT
     UMP_OTC --> CONSENT
 
-    CONSENT["**Completion**\nBE: link-chatgpt / link-mcp\nagreeClick\n**7,408**"]:::completion
+    CONSENT["**Completion**\nBE: link-chatgpt / link-mcp\nagreeClick\n**7,488**"]:::completion
 ```
 
 ## Validated User Paths (Mar 10–12 + enrichment Mar 17)
