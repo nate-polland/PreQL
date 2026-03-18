@@ -263,14 +263,13 @@ else:
 
 Classifies each funnel entrant into a user-type cohort based on which signal screens they hit, then measures per-cohort conversion. Useful for understanding funnel mix across time periods or between funnels.
 
-**Cohort signals (auth funnels):**
-- **Cat1 — Recognized login:** hit `login-*` or `ump-*` screens (existing user recognized at entry or mid-flow)
-- **Cat2a — Match failed:** hit `matchFailedReturn` (existing user, Prove couldn't verify)
-- **Cat3 — New user:** hit `termsContinue` (TOS acceptance = net-new account)
-- **Cat2b — Prove-returning:** completed without login screens, TOS, or matchFailed (existing user recognized by Prove mid-flow, skips TOS)
-- **Bouncer:** no signal screens, no completion
+**Three cohorts (auth funnels):**
+- **🔵 Phone match:** recognized at OTP → skips PII and TOS entirely (ChatGPT: 66.4% of OTP users; LBE: <1%)
+- **🟠 PII/credential match:** existing user identified via email (DUP_EMAIL) or Prove without TOS — routed to login
+- **🟢 New user:** hit `termsContinue` (TOS acceptance = net-new account)
+- **Bouncer:** no classification signal, no completion
 
-**Priority order:** Cat1 > Cat2a > Cat3 > Cat2b > Bouncer. Apply as a CASE WHEN chain — a user who hit both login and matchFailed is Cat1.
+**Priority order:** 🔵 > 🟠 > 🟢 > Bouncer. Apply as a CASE WHEN chain.
 
 ```sql
 WITH entries AS (
@@ -284,10 +283,15 @@ WITH entries AS (
 
 screens AS (
   SELECT e.user_cookieId, e.funnel,
-    MAX(CASE WHEN be.content_screen LIKE 'login%' OR be.content_screen LIKE 'ump%' THEN 1 ELSE 0 END) AS saw_login,
-    MAX(CASE WHEN be.system_eventCode = 'matchFailedReturn'                          THEN 1 ELSE 0 END) AS saw_matchfailed,
-    MAX(CASE WHEN be.system_eventCode = 'termsContinue'                              THEN 1 ELSE 0 END) AS saw_tos,
-    MAX(CASE WHEN [completion_condition]                                              THEN 1 ELSE 0 END) AS completed
+    -- 🔵 Phone match: OTP recognized → skips PII entirely (no personalInfo, no login, no TOS)
+    MAX(CASE WHEN be.system_eventCode = 'phoneVerificationContinue'
+              AND NOT EXISTS (SELECT 1 FROM ...) THEN 1 ELSE 0 END) AS phone_match,
+    -- 🟠 PII/cred: hit email-recognition or login screens
+    MAX(CASE WHEN be.content_screen LIKE 'login%' OR be.content_screen LIKE 'ump%'
+              OR be.system_eventCode = 'duplicateEmailRedirectToLogin' THEN 1 ELSE 0 END) AS saw_login,
+    -- 🟢 New user: TOS acceptance
+    MAX(CASE WHEN be.system_eventCode = 'termsContinue'              THEN 1 ELSE 0 END) AS saw_tos,
+    MAX(CASE WHEN [completion_condition]                              THEN 1 ELSE 0 END) AS completed
   FROM entries e
   JOIN `[event_table]` be
     ON be.user_cookieId = e.user_cookieId
@@ -299,11 +303,10 @@ screens AS (
 classified AS (
   SELECT *,
     CASE
-      WHEN saw_login      = 1 THEN 'Cat1_recognized_login'
-      WHEN saw_matchfailed = 1 THEN 'Cat2a_match_failed'
-      WHEN saw_tos        = 1 THEN 'Cat3_new_user'
-      WHEN completed      = 1 THEN 'Cat2b_prove_returning'
-      ELSE 'Bouncer'
+      WHEN saw_login   = 1 AND saw_tos = 0 THEN 'phone_match_🔵'
+      WHEN saw_login   = 1                 THEN 'pii_cred_match_🟠'
+      WHEN saw_tos     = 1                 THEN 'new_user_🟢'
+      ELSE 'bouncer'
     END AS cohort
   FROM screens
 )
@@ -318,19 +321,105 @@ GROUP BY funnel, cohort
 ORDER BY funnel, cohort
 ```
 
+**NOTE: Prefer math over running this query when flowchart step counts are available.** See "Math-First Cohort Estimation" below.
+
 **Multi-funnel note:** When using UNION ALL across funnels with different date windows, the static partition filter in the `screens` join must span all windows combined (e.g., `BETWEEN '2025-09-01' AND '2026-03-15'`). If windows are far apart, split into separate queries per time period — a single 6-month scan is expensive.
 
 **Bouncer sub-segmentation (proxy only):** Bouncers have no clean cohort signal, but can be roughly typed by last screen:
-- Saw `personalInfo` impression → likely Cat3 analog (new user who gave up on PII form)
-- Saw `phoneInfoContinueSubmitError` → likely Cat1 analog (phone already registered = existing user)
-- Reached OTP but dropped → apply the Cat2a rate as a proxy for existing-but-unverifiable fraction
+- Saw `personalInfo` impression → likely new-user analog
+- Saw `phoneInfoContinueSubmitError` → likely phone match analog (phone already registered)
+- Reached OTP but dropped → apply OTP-signal cohort split as a proxy
 
 Label these estimates as proxies in any output — they are inferred, not directly measured.
 
-**Validated findings (Mar/Sep 2026):**
-- ChatGPT is Cat2b-dominant (46%) — phone-first entry enables Prove recognition without login screens
-- LBE funnels are bouncer-dominant (61–78%) — PII-first entry creates high friction for all cohorts
-- Cat3 in LBE Intuit Sep 2025 showed 0% conversion — traced to `proveVerificationPending` issue, resolved by Mar 2026
+**Validated findings (Mar 2026):**
+- ChatGPT: ~73% of OTP users are 🔵 phone match → drives 65% overall CVR
+- LBE funnels: 🔵 phone match is <1%; 70–78% are bouncers → ceiling on overall CVR
+- 🟢 new users convert at ~62–98% when the path works; LBE Intuit Sep '25 0% was a `proveVerificationPending` bug (fixed Mar '26)
+- CK-origin matchFailed rate is 18% of entry (vs ~2–4% for other LBE funnels) — largest single drop opportunity
+
+---
+
+## Math-First Cohort Estimation
+
+When a funnel doc has documented step counts, **derive cohort splits mathematically** rather than running a query. Run a query only when a key count is missing, the math produces an implausible result, or per-cohort CVR can't be back-calculated. When unsure, ask the user before running.
+
+**Cohort % from first signal:**
+1. Find the earliest step where cohorts diverge (OTP skip-PII for 🔵, DUP_EMAIL for 🟠, TOS for 🟢)
+2. Read the count at that step from the flowchart doc
+3. Cohort entry % = `first_signal_count / total_entry_count`
+4. Pre-signal droppers: apply the same cohort split ratio backward (they're assumed to have the same mix)
+
+**CVR back-calculation:**
+- Cat3 completions ≈ `new_accounts_created × post_auth_cvr` (post_auth_cvr = `completions / post_auth_entry`)
+- Cat1 completions = `total_completions − Cat2_completions − Cat3_completions`
+- Per-cohort CVR = `cohort_completions / cohort_entry_count`
+
+**When math isn't enough — run a query:**
+- 🔵 phone match count is not in the flowchart (it's implied, not counted)
+- Post-auth CVR differs materially by cohort (i.e., one cohort has higher drop at offer quality / marketplace steps)
+- Validating a new funnel for the first time
+
+---
+
+## Pattern 8 — Drop-off by Cohort × Step
+
+Extends Pattern 3 (dropout classification) with cohort labels. Produces a matrix of drop-off step × cohort — useful for identifying which cohort is responsible for the biggest absolute drop at each step, and for building targeted experiment or re-engagement populations.
+
+```sql
+-- After session_steps CTE (from Pattern 1) and classified CTE (from Pattern 7):
+non_completers AS (
+  SELECT s.[stitch_key], s.cohort_date
+  FROM session_steps s
+  WHERE s.completed = 0
+),
+
+last_events AS (
+  SELECT
+    nc.[stitch_key],
+    nc.cohort_date,
+    ev.content_screen   AS last_screen,
+    ev.system_eventType AS last_event_type,
+    ROW_NUMBER() OVER (PARTITION BY nc.[stitch_key] ORDER BY ev.ts DESC) AS rn
+  FROM non_completers nc
+  JOIN [event_table] ev
+    ON ev.[stitch_key] = nc.[stitch_key]
+    AND ev.ts BETWEEN [session_start_ts] AND [session_end_ts]  -- same window as session_steps
+  WHERE DATE(ev.ts) BETWEEN '[start]' AND '[end + buffer]'     -- partition filter first
+),
+
+drop_classified AS (
+  SELECT
+    le.[stitch_key],
+    le.last_screen,
+    CASE
+      WHEN le.last_event_type IN (1, 4) THEN 'organic_dropout'
+      WHEN le.last_event_type IN (2, 3) THEN 'disappearance'
+    END AS dropout_type,
+    cl.cohort  -- from Pattern 7 classified CTE
+  FROM last_events le
+  LEFT JOIN classified cl USING ([stitch_key])
+  WHERE le.rn = 1
+)
+
+SELECT
+  cohort,
+  last_screen,
+  dropout_type,
+  COUNT(*)                                                              AS users,
+  ROUND(COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY cohort) * 100, 1) AS pct_of_cohort_drops,
+  ROUND(COUNT(*) / SUM(COUNT(*)) OVER () * 100, 1)                    AS pct_of_all_drops
+FROM drop_classified
+GROUP BY 1, 2, 3
+ORDER BY cohort, users DESC
+```
+
+**How to read the output:**
+- `pct_of_cohort_drops` — within a given cohort, where does most of the drop happen? (tells you where to focus for that cohort)
+- `pct_of_all_drops` — across the full funnel, how much of total drop-off does this cohort × step cell represent? (tells you the absolute opportunity size)
+- Sort by `pct_of_all_drops DESC` to find the highest-leverage intervention point across all cohorts
+
+**Tip:** Use this output to generate experiment hypotheses. A cell where `pct_of_all_drops` is high and the cohort has high completion potential (low-CVR cohort, large population) is the highest-priority target. See `Context/drop-off-to-experiment.md` for the hypothesis framing template.
 
 ---
 
@@ -342,3 +431,4 @@ Label these estimates as proxies in any output — they are inferred, not direct
 - **For cross-auth funnels:** apply the 1:1 cardinality gate on the stitch key before all joins (Pattern 1 note above)
 - **Partial periods:** always flag the most recent week/day as potentially incomplete in results
 - **Large event table joins:** use async script — refer to `CLAUDE.md` for path and usage
+- **Ordered vs. unordered funnels:** Pattern 1 measures step *reach*, not step *sequence*. The `MAX(CASE WHEN ...)` flags capture whether a step was ever hit — not whether it was hit before or after another step. For ordered funnels this is fine (the sequence is enforced by the product). For unordered funnels (where users can complete steps in any order or skip to completion), do not infer sequence from the presence of a flag. If order matters, use `ROW_NUMBER()` or timestamp comparisons to confirm sequencing explicitly.

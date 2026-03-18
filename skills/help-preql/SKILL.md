@@ -41,9 +41,16 @@ Just type your question. Examples:
 
 | Command | What it does |
 |---|---|
-| `/funnel-discovery` | Maps a product funnel interactively and saves a reusable doc |
+| `/funnel-discovery` | Maps an unfamiliar product funnel end-to-end and saves a reusable doc |
+| `/funnel-decomposition` | Decomposes a documented funnel into path-based cohorts — % of users and completion rate |
+| `/update-funnel` | Updates an existing funnel doc with new findings, step counts, or flowchart changes |
+| `/experiment-design` | Power calculation + hypothesis doc + Darwin setup checklist before shipping an experiment |
+| `/metric-investigation` | Diagnoses an unexpected metric movement — data quality first, then dimension breakdown |
 | `/add-table-schema` | Documents a new BigQuery table so the team can query it |
+| `/update-table-schema` | Updates an existing schema doc (new fields, validated flags, join key changes) |
+| `/data-lineage` | Traces where a table comes from, how it's built, and whether it's reliable |
 | `/contribute` | Push local changes (new schemas, funnels, fixes) back to GitHub |
+| `/sync` | Pull the latest updates from GitHub safely, handling local changes and conflicts |
 | `/onboard` | Setup check + guided orientation for new users |
 | `/help-preql` | This overview |
 

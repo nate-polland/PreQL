@@ -204,3 +204,12 @@ flowchart TD
 
     MARKETPLACE["**Completion**\nBE: personal-loan-marketplace\nfirst impression\n**17** (3.5%)"]:::completion
 ```
+
+## Cohort Analysis
+
+**Not suitable for quantitative cohort analysis.** Two reasons:
+
+1. **Cat3 (🟢 new user) CVR = 0%** due to the `proveVerificationPending` bug active in this window — TOS fires (75 impressions, 66 submit) but no new accounts complete. This makes the Cat3 CVR non-representative.
+2. **Very small n** (483 entry, 17 completions) — cohort-level rates would have high variance.
+
+Use `lbe-intuit.md` (Mar '26) for LBE Intuit cohort analysis. Sep '25 is useful for funnel structure and screen mapping only.

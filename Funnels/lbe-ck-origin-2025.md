@@ -218,3 +218,37 @@ flowchart TD
 
     MARKETPLACE["**Completion**\nBE: personal-loan-marketplace\nfirst impression\n**180** (7.9%)"]:::completion
 ```
+
+## Cohort Analysis
+
+### Methodology
+
+Same framework as `chatgpt-auth.md` and `lbe-intuit.md`. Anchor = **Entry** (2,278 cookies, Sep 1–3 2025).
+
+**Cat2 (🟠) first signals:** direct login path (existing members who skip PII entirely) + DUP_EMAIL (email recognized in PII path) — both query-confirmed. **Cat3 (🟢) first signal:** TOS impression. matchFailed (414 cookies, 18% of entry) is unresolvable — SRRF undercounts for CK-origin; treated as unclassified and allocated proportionally.
+
+**Drop allocation mix:** Classified mix Cat2=88.4% / Cat3=11.6% (505 Cat2 : 66 Cat3 from query). Reflects CK-origin's predominantly existing-member user base.
+
+**matchFailed → POST_AUTH:** query-confirmed = **6 cookies** (1.4% recovery; negligible). Post-auth CVR (uniform): 180/211 = **85.3%**.
+
+### Cohort Population and Completion Rate
+
+Queries run: CK-origin entry Sep 1–3, all events Sep 1–6 (post-auth extended window). Completions are **directly queried** via BE completer classification query (total 179 ≈ 180 ✓ — near-perfect stitch; existing-member login path does not reset cookieId).
+
+| Cohort | Classified | Allocated drops | % of users | Completions | Completion rate | Completion rate (from first signal) |
+|---|---|---|---|---|---|---|
+| 🔵 Phone match | ~0 | — | **<0.1%** | — | — | — |
+| 🟠 PII/cred match | 505 | 1,509 | **88.4%** | 127 (BE direct) | **6.3%** | 25.1% (of 505) |
+| 🟢 New user | 66 | 198 | **11.6%** | 50 (BE direct) | **18.9%** | 75.8% (of 66 TOS) |
+| **Total** | **571** | **1,707** | **100%** | **179** | **7.9%** ✓ | — |
+
+**Cat2 classified:** 424 direct login (query-confirmed) + 81 DUP_EMAIL (query-confirmed) = 505
+
+**Validation:** 88.4% × 6.3% + 11.6% × 18.9% = 5.6 + 2.2 = **7.8% ≈ 7.9%** ✓
+
+### Interpretation
+
+- 🟠 Existing users dominate at 88.4% — CK-origin traffic is almost entirely existing CK members clicking into the LBE loan experience
+- High matchFailed (18%) is driven by existing members' phones already being registered — Prove identity check fails on phone duplication
+- 🟢 New users are only 11.6% of the funnel but convert extremely well from TOS (81.8%), best across all funnels — CK-origin new users are high purchase-intent
+- Despite heavy pre-auth friction, post-auth CVR (85.3%) is the highest of all LBE variants

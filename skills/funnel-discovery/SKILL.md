@@ -43,6 +43,15 @@ Present this as a short bullet summary — not a list of questions. Let the user
 
 Only after Phase 2 alignment is confirmed:
 
+**Query planning rule — required before writing any SQL.** For every query, state a brief plan first:
+- **Table + partition filter** — which table, which `DATE(ts)` range
+- **Columns needed** — only what the query output requires; no extras
+- **Join key** — how tables connect, and whether 1:1 cardinality is assumed
+- **Expected output shape** — one row per what? (user, session, screen, day?)
+- **Expected order of magnitude** — rough row count expectation
+
+State this before writing SQL. It catches join-key mismatches and column overselection before compute is spent, and gives the user a chance to redirect.
+
 1. **Know your table type** before querying:
    - **Sequential event tables** (e.g., BigEvent): one row per event with timestamps — can build per-user ordered paths directly
    - **Pre-aggregated summary tables** (e.g., SRRF): one row per user with binary flags — shows what steps were hit but not timestamps or ordering. Use these to understand path patterns; go to the event table for sequential traces.
@@ -69,6 +78,12 @@ The BigQuery MCP connection times out at ~60s. For large event table joins, use 
 **Use async for:** any query joining large event tables on non-partition keys, multi-CTE funnels, anything likely >30s. Refer to `CLAUDE.md` for the exact async script path and usage for this project.
 
 **Use MCP for:** counts, schema checks, INFORMATION_SCHEMA, small tables.
+
+**After every query — validate before interpreting results:**
+1. **Non-zero rows** — zero rows means the filter is wrong or the field doesn't exist. Debug before proceeding; don't present empty results as a finding.
+2. **Plausible row count** — does the order of magnitude match the plan? A count 10x higher than expected usually means a join is fanning out (missing 1:1 cardinality gate). A count 10x lower usually means the partition filter is too tight or a field value doesn't match.
+3. **Spot-check values** — pick 2-3 rows and verify IDs, timestamps, and screen names look realistic. Null-heavy key columns indicate a join key mismatch.
+4. **Partition scan (async only)** — verify the query scanned only the intended date range. A full-table scan means `DATE(ts)` didn't push down as a partition filter — rewrite the WHERE clause before widening the window.
 
 ## Phase 3 — Handle Unauthenticated Users
 
@@ -204,6 +219,10 @@ Document contents:
 - Experiments (optional — omit section entirely if no experiments are attached)
 
 **`## Recent Metrics` section format:** A dated snapshot table of every funnel step with its raw count. Include one row per step — impression count, submit count, terminal drop count. This allows any conversion or drop rate to be calculated from the doc without requerying. Append a new snapshot when counts are refreshed; keep prior snapshots for trend context.
+
+**Finalization checkpoint:** Before closing out a funnel, ask the user:
+1. **Flowchart** — is the flowchart final? Once confirmed, mark `status: final` in the `.md` header and note the date.
+2. **Queries** — are there any queries from this discovery (entry cohort, screen inventory, cohort classification, funnel counts) worth persisting? Add validated, runnable versions to `Queries/` following the format in `Queries/_index.md`. Only persist queries that are non-trivial to reconstruct and likely to be reused. Don't add minor variants of existing queries.
 
 Report: "Funnel documented at `Funnels/[funnel-name].md`. Ready for funnel queries."
 

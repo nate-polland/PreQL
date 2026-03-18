@@ -106,7 +106,7 @@ Tell the user a browser window will open for each — they should sign in with t
 cd ~/Documents/Claude\ Code/PreQL && bash scripts/install-skills.sh
 ```
 
-All 4 skills should show as linked. If any show warnings, follow the instructions in the script output.
+All skills should show as linked (currently 12). If any show warnings, follow the instructions in the script output.
 
 Then connect BigQuery. Run:
 
@@ -157,12 +157,18 @@ Full SailPoint instructions: https://airlock.static.corp.creditkarma.com/sailpoi
 
 **"Access Denied" on a specific dataset or view (general project access works, but a specific query fails):**
 The user has project-level access but not to that specific dataset. To get it:
-1. Note the dataset name from the error (format: `project:dataset.table`)
-2. Look up the required Google group in the [Airlock Access Catalog](https://airlock.static.corp.creditkarma.com/index.html) — search for the dataset name and check "Access Info Tag"
-3. Request that group in [SailPoint](https://iam.int.creditkarma.com/identityiq/home.jsf) (search by group name, without `@creditkarma.com`)
-4. Manager approval required
+1. Read the error — format is `Access Denied: Table project:dataset.table`. Extract the **dataset name** (e.g., `kafka_sponge`).
+2. Open the [Airlock Access Catalog](https://console.cloud.google.com/dataplex/search?project=prod-ck-aac-data-6e&from_dc=true&q=tag:prod-ck-aac-data-6e.access_info_tag%20projectid:prod-ck-acl-data-9d) and append `name:[dataset_name]` to the search filter (e.g., `name:kafka_sponge`). Click Search.
+3. Click the dataset from the results → find **Access Info Tag** under Tags → note the Google group name listed there.
+4. Go to [SailPoint](https://iam.int.creditkarma.com/identityiq/home.jsf) → **Manage My Access** → search for that Google group name (omit `@creditkarma.com` from the group name). Submit the request.
+5. Manager approval required — typically 1–2 business days.
 
 For questions: `#airlock_access_control` on Slack.
+
+**SailPoint login problems:**
+- *"This site can't be reached" / DNS error:* Confirm Global Protect VPN is connected to `CK-US-WEST-GW` or `CK-US-EAST-GW` — not "Best Available".
+- *Redirected to login page or login fails:* Clear cookies at `chrome://settings/content/siteDetails?site=https://iam.int.creditkarma.com/` → click **Clear data** → retry.
+- *Wrong username / other login issues:* Ask in `#iam` on Slack.
 
 ---
 

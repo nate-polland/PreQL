@@ -254,6 +254,43 @@ Full step counts — use these to calculate any conversion/drop rate without req
 - Forced 2FA and recovery paths confirmed across 3 days (2 sessions each) but still low volume
 - `regLog_ssn_lookup_success` and `regLog_report_pull_creditfreeze` — suspected inverted flags (same `regLog_` prefix pattern as the confirmed-inverted `regLog_account_created`). Not yet validated against ground truth.
 
+## Cohort Analysis
+
+### Methodology
+
+Users are classified by **first observable signal** — the earliest step that reveals identity status. Classification is propagated backward using a **uniform dropout assumption**: pre-classification drop-off at each step is assumed equal across cohorts, absent data to the contrary. Drops at classified steps are allocated proportionally to the cohort mix at that step.
+
+**Stated assumptions:**
+1. Pre-classification dropout is uniform across cohorts at each step
+2. Cohort mix at the first-signal step is applied as the prior for unclassified droppers at earlier steps
+3. Prove outcome is the classification event for PII-path users (outcomes: phone match → skip PII, PII/cred match, or new user)
+
+**Anchor step:** OTP Submit — **10,429 users** (Jan 1–Mar 17 2026). Last step where all users share a common path before any forking.
+
+**Denominator methodology:** Each step uses its *previous step* as the denominator for conditional %. Multiply through the chain to get % of anchor. Do not use entry as the denominator everywhere.
+
+### Cohort Population and CVR
+
+All numbers query-confirmed (BE cookie-join for Cat1; SRRF `success_prove_call` for Cat3/Cat2 Prove counts). Cohort totals include allocated drops.
+
+| Cohort | Classified | Allocated drops | Total | % of anchor | Completions | CVR |
+|---|---|---|---|---|---|---|
+| 🔵 Phone match | 6,923 | — | 6,923 | **66.4%** | 5,795 | **83.7%** |
+| 🟠 PII/cred match | 1,234 | 1,685 | 2,919 | **28.0%** | 1,579 | **54.1%** |
+| 🟢 New user | 116 | 504 | 620 | **5.9%** | 114 | **18.4%** (98.3% from TOS) |
+| **Total** | **8,273** | **2,189** | **10,462** | **100.3%** ✓ | **7,488** | **71.8%** |
+
+**Drop allocation:** PII-path drops (silent bounces + Prove fails) split at Cat2=75.9% / Cat3=24.1% — the observed mix of classifiable PII users (365 Cat2 + 116 Cat3 = 481 total).
+
+**Validation:** 66.4% × 83.7% + 28.0% × 54.1% + 5.9% × 18.4% = 55.6 + 15.1 + 1.1 = **71.8% = 7,488/10,429** ✓
+
+### Interpretation
+
+- 🔵 Phone-match users convert at **83.7%** — benchmark for a frictionless auth path
+- 🟠 PII/cred-match users convert at **54.1%** — 29 points lower due to PII form friction
+- 🟢 New users convert from TOS at **98.3%** but represent only 5.9% of the funnel; the 18.4% from-anchor rate reflects heavy pre-TOS drop-off
+- The PII path (Cat2 + Cat3 = 33.9%) accounts for ~46% of total drop-off — primary optimization target
+
 ## Tables
 | Table | Role |
 |---|---|
