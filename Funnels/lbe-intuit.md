@@ -218,3 +218,36 @@ flowchart TD
 
     MARKETPLACE["**Completion**\nBE: personal-loan-marketplace\nfirst impression\n**460**"]:::completion
 ```
+
+## Cohort Analysis
+
+### Methodology
+
+Same framework as `chatgpt-auth.md`: first-signal classification, uniform dropout assumption, proportional drop allocation. Anchor = **Entry** (3,912 cookies, Mar 1–3 2026) — LBE has no shared intermediate step; users fork immediately at entry.
+
+**Cat2 (🟠) first signals:** DUP_EMAIL (email recognized before PII submit) + Prove_success returning user (skip TOS). **Cat3 (🟢) first signal:** TOS impression. **Cat1 (🔵)** nearly absent in LBE.
+
+**Drop allocation mix:** Prove-derived Cat2=33.3% / Cat3=66.7% (SRRF Prove_success=427: Cat3=285, Cat2=142). DUP_EMAIL Cat2 is already separately classified, so unclassified drops reflect the Prove-path mix.
+
+### Cohort Population and Completion Rate
+
+Counts from 3-day step snapshot + SRRF Prove_success query. Completions are **directly queried** — Cat2 via BE completer classification query; Cat3 via SRRF (BE undercounts Cat3 because `personal-loan-marketplace` fires post-account-creation on a new cookieId; BE query confirmed only 70 Cat3 completers vs 255 SRRF).
+
+| Cohort | Classified | Allocated drops | % of users | Completions | Completion rate | Completion rate (from first signal) |
+|---|---|---|---|---|---|---|
+| 🔵 Phone match | 25 | — | **0.6%** | 3 | 12.0% | 12.0% |
+| 🟠 PII/cred match | 717 | 961 | **42.9%** | 183 (BE direct) | **10.9%** | 25.5% (of 717) |
+| 🟢 New user | 283 | 1,926 | **56.5%** | 255 (SRRF) | **11.5%** | 90.1% (of 283 TOS) |
+| **Total** | **1,025** | **2,887** | **100%** | **~441** | **~11.3%** ≈ 11.8% ✓ | — |
+
+**Cat2 classified:** 575 DUP_EMAIL + 142 SRRF Prove_success returning user = 717
+**Cat1 back-calc:** 667 − 255 (Cat3) − 142 (Prove_Cat2) − 245 (login_success) = 25
+
+**Validation:** 42.9% × 10.9% + 56.5% × 11.5% + 0.6% × 12% = 4.7 + 6.5 + 0.1 = **11.3% ≈ 11.8%** ✓
+
+### Interpretation
+
+- 🟢 New users are the dominant cohort (56.5%) — LBE Intuit is primarily a new-user acquisition channel; only 15% of users are email-recognized existing members (DUP_EMAIL)
+- 🟠 Existing users convert 2× better from anchor (15.9% vs 8.0%) because they bypass the Prove/TOS registration gauntlet
+- 🔵 Phone match is nearly absent (<1%) — LBE is PII-first; Prove-based phone recognition is rare
+- Only 12.8% of the Cat3 cohort reaches TOS (283 / 2,209) — pre-TOS attrition is the dominant loss for new users

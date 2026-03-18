@@ -25,7 +25,10 @@ Different file types have different review requirements. The table below defines
 | `/add-table-schema` | Document a new BigQuery table schema |
 | `/update-table-schema` | Update an existing Schema/ doc (new fields, flag validation, join key changes) |
 | `/funnel-discovery` | Map an unfamiliar product funnel end-to-end |
+| `/funnel-decomposition` | Decompose a documented funnel into path-based cohorts — % of users and completion rate per cohort |
 | `/update-funnel` | Update an existing Funnels/ doc (new findings, stale flowchart) |
+| `/experiment-design` | Power calculation + hypothesis doc + Darwin setup checklist before shipping an experiment |
+| `/metric-investigation` | Diagnose an unexpected metric movement — data quality first, then dimensional breakdown |
 | `/data-lineage` | Trace where a table comes from and whether it's reliable |
 | `/onboard` | First-time setup — verify BigQuery connection and orientation |
 | `/contribute` | Push local changes back to the PreQL GitHub repo |

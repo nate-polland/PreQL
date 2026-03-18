@@ -134,3 +134,5 @@ Keep `session.md` up to date throughout the conversation:
 - Partition pruning and explicit column selection on every query
 - Never expose raw epoch timestamps without converting
 - Cite caveats from `Context/` when relevant (especially revenue aging)
+- **Recurring query persistence:** If the same analytical question comes up across 2+ sessions and the SQL is non-trivial, suggest persisting it to `Queries/`. Don't save one-off queries or minor variants. See `Queries/_index.md` for format and criteria.
+- **Explicit column selection — never SELECT \*.** Before writing any query against a wide table (BigEvent, SRRF, etc.), identify which columns the output actually requires and list only those. The goal isn't a fixed whitelist — it's intentional thinking about what's needed for this specific query. State the column list in the query plan before writing SQL.

@@ -56,13 +56,19 @@ SELECT 1 AS connection_test
    ```
    Then restart Claude Code and try again.
 
-3. If the user gets an "Access Denied" error on `prod-ck-abl-data-53`, they need to request Airlock BigQuery access via SailPoint:
-   > https://airlock.static.corp.creditkarma.com/bigquery_access/index.html#how-do-i-get-access-to-airlock-bigquery
+3. If the user gets an "Access Denied" error on `prod-ck-abl-data-53` (project-level), they need to request Airlock BigQuery access via SailPoint:
+   - Go to [SailPoint](https://iam.int.creditkarma.com/identityiq/home.jsf) → **Manage My Access** → search **"Airlock ABL BQ Access"** → submit. Manager approves via email, typically 1–2 business days.
 
-   For access to a specific table (rather than the project generally), the Airlock team also handles table-level grants via a Jira ticket to the AIR board:
-   > https://jira.creditkarma.com/secure/RapidBoard.jspa?rapidView=1467&projectKey=AIR
+4. If "Access Denied" on a specific dataset (project access works but a query fails):
+   - Read the error: format is `Access Denied: Table project:dataset.table` — extract the dataset name.
+   - Open the [Airlock Access Catalog](https://console.cloud.google.com/dataplex/search?project=prod-ck-aac-data-6e&from_dc=true&q=tag:prod-ck-aac-data-6e.access_info_tag%20projectid:prod-ck-acl-data-9d), append `name:[dataset_name]` to the search filter, click the result → find **Access Info Tag** → that's the Google group to request.
+   - In SailPoint, search for that group name (omit `@creditkarma.com`) and submit. Manager approval required.
+   - Questions: `#airlock_access_control`
 
-   Let them know to request access and come back once it's approved — this can take a day or two.
+5. SailPoint login problems:
+   - *"Site can't be reached":* VPN must be on `CK-US-WEST-GW` or `CK-US-EAST-GW`, not "Best Available"
+   - *Redirected to login / login fails:* Clear cookies at `chrome://settings/content/siteDetails?site=https://iam.int.creditkarma.com/` → **Clear data** → retry
+   - *Wrong username / other:* Ask in `#iam`
 
 ---
 
@@ -74,11 +80,13 @@ If they want the orientation, give a 3-sentence summary:
 
 > PreQL translates plain-English questions into validated BigQuery SQL. You ask a question, it interprets what you're after, generates and validates the SQL, and returns a summary with the query. It knows your team's tables, join patterns, and business logic — you don't need to.
 
-Then mention the two most useful built-in commands:
+Then mention a few key commands to get started:
 - `/funnel-discovery` — maps a product funnel interactively and saves the doc
-- `/add-table-schema` — documents a new BigQuery table for the team
+- `/funnel-decomposition` — breaks a funnel into cohorts by user path
+- `/experiment-design` — power calc + hypothesis doc before shipping an experiment
+- `/metric-investigation` — structured workflow when a metric moves unexpectedly
 
-Tell them they can type `/help-preql` at any time to get a full overview of what PreQL can do.
+Tell them to type `/help-preql` at any time to see the full list of commands.
 
 ---
 

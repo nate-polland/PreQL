@@ -16,9 +16,27 @@
   .sw-completion{ background: #dcfce7; border-color: #22c55e; }
   .sw-removed   { background: #f3e8ff; border-color: #a855f7; }
   .note { font-size: 13px; color: #555; margin-bottom: 16px; }
+  .fc { margin-bottom: 20px; overflow-x: auto; }
+  .fc table { border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+  .fc th, .fc td { padding: 4px 10px; border: 1px solid #e5e7eb; text-align: center; }
+  .fc td:first-child { text-align: left; font-weight: 500; color: #374151; }
+  .fc th { background: #f9fafb; font-weight: 600; }
+  .fc th.cur { background: #fef9c3; }
+  .fc td.cur { background: #fefce8; }
+  .fc .fnote { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+  .funnel-nav { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .funnel-nav a { padding: 5px 12px; border-radius: 4px; font-size: 13px; text-decoration: none; background: #f1f5f9; color: #374151; border: 1px solid #e2e8f0; }
+  .funnel-nav a:hover { background: #e2e8f0; }
+  .funnel-nav a.current { background: #1e40af; color: #fff; border-color: #1e40af; font-weight: 600; pointer-events: none; }
 </style>
 </head>
 <body>
+<div class="funnel-nav">
+  <a href="chatgpt-auth-flowchart.html">ChatGPT Auth</a>
+  <a href="lbe-intuit-flowchart.html">LBE Intuit (current)</a>
+  <a href="lbe-intuit-2025-flowchart.html" class="current">LBE Intuit Sep 2025</a>
+  <a href="lbe-ck-origin-2025-flowchart.html">LBE CK-Origin Sep 2025</a>
+</div>
 <h2>LBE / Intuit Auth Funnel — Sep 2025 (Historical)</h2>
 <p class="note">
   Entry: 483 cookies (Sep 1–3, 2025, Intuit-origin only) · Conversion: 17 / 483 = <strong>3.5%</strong><br>
@@ -30,6 +48,50 @@
   <div class="legend-item"><div class="swatch sw-drop"></div> Drop-off node</div>
   <div class="legend-item"><div class="swatch sw-completion"></div> Completion</div>
   <div class="legend-item"><div class="swatch sw-removed"></div> Removed from current funnel</div>
+  <div class="legend-item">🔵 Phone match (Prove success → existing account)</div>
+    <div class="legend-item">🟠 PII match (login / credential path)</div>
+    <div class="legend-item">🟢 New user (TOS path → new account)</div>
+    <div class="legend-item"><em style="font-size:12px;color:#666">No dot = matchFailed or bounce (not a user type)</em></div>
+</div>
+
+<div class="fc">
+  <table>
+    <thead><tr>
+      <th>Path / Feature</th>
+      <th>ChatGPT</th>
+      <th>LBE Intuit</th>
+      <th class="cur">LBE Intuit '25</th>
+      <th>LBE CK '25</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>PII form (full)</td>           <td>—</td>      <td>✅ ~89%</td>   <td class="cur">✅ ~51%</td>   <td>✅ ~64%</td></tr>
+      <tr><td>Phone-first entry</td>         <td>✅ 100%</td> <td>✅ minor</td>  <td class="cur">✅ ~49%</td>   <td>✅ ~36%</td></tr>
+      <tr><td>Login path (Cat 1)</td>        <td>✅ 38%</td>  <td>✅ 16%</td>   <td class="cur">✅ 10%</td>    <td>✅ 23%</td></tr>
+      <tr><td>matchFailed (Cat 2a)</td>      <td>✅ 3%</td>   <td>✅ 2%</td>    <td class="cur">✅ 4%</td>     <td>✅ 14% ⚠️</td></tr>
+      <tr><td>TOS → new account (Cat 3)</td> <td>✅ 1%</td>   <td>✅ 4%</td>    <td class="cur">✅ 11% *</td>  <td>✅ 2%</td></tr>
+      <tr><td>Prove-returning, skip TOS (Cat 2b)</td><td>✅ 46%</td><td>—</td>  <td class="cur">—</td>        <td>—</td></tr>
+      <tr><td>Report pull interstitial</td>  <td>—</td>      <td>✅</td>        <td class="cur">✅</td>        <td>✅</td></tr>
+      <tr><td>Offer quality form</td>        <td>—</td>      <td>✅ 33%</td>   <td class="cur">✅ 86%</td>    <td>✅ 27%</td></tr>
+      <tr><td>Intuit offer card</td>         <td>—</td>      <td>—</td>        <td class="cur">✅ removed</td><td>—</td></tr>
+      <tr><td>Survey flow</td>               <td>—</td>      <td>—</td>        <td class="cur">✅ removed</td><td>—</td></tr>
+      <tr><td>Completion: consent click</td> <td>✅</td>     <td>—</td>        <td class="cur">—</td>        <td>—</td></tr>
+      <tr><td>Completion: marketplace</td>   <td>—</td>      <td>✅</td>        <td class="cur">✅</td>        <td>✅</td></tr>
+      <tr style="border-top:2px solid #e5e7eb"><td colspan="5" style="text-align:left;font-weight:600;background:#f9fafb;font-size:11px;color:#6b7280;padding:6px 10px">COHORT MIX AT ENTRY — first-signal classification; pre-signal droppers allocated by same ratio</td></tr>
+      <tr><td>🔵 Phone match (% entry)</td>  <td>~73% †</td>  <td>&lt;1%</td>   <td class="cur">~0%</td>      <td>~1%</td></tr>
+      <tr><td>🔵 Phone match CVR</td>         <td>~80%</td>   <td>~70%</td>    <td class="cur">—</td>         <td>—</td></tr>
+      <tr><td>🟠 PII/cred match (% entry)</td><td>~26%</td>   <td>~15%</td>    <td class="cur">~6%</td>       <td>~24%</td></tr>
+      <tr><td>🟠 PII/cred CVR</td>            <td>~37%</td>   <td>~46%</td>    <td class="cur">—</td>         <td>—</td></tr>
+      <tr><td>🟢 New user (% entry)</td>      <td>~1%</td>    <td>~7%</td>     <td class="cur">~16% *</td>    <td>~3%</td></tr>
+      <tr><td>🟢 New user CVR</td>            <td>~98%</td>   <td>~62%</td>    <td class="cur">0% *</td>      <td>~85%</td></tr>
+      <tr><td>Unclassified bounce</td>        <td>~0%</td>    <td>~78%</td>    <td class="cur">~78%</td>      <td>~72%</td></tr>
+    </tbody>
+  </table>
+  <p class="fnote">
+    * Cat 3 LBE Intuit Sep '25 = 0% cvr (proveVerificationPending issue, fixed Mar '26)<br>
+    † ChatGPT 🔵: 73% of OTP impressions skip PII entirely (OTP impression = 10,427; skip-PII path = ~7,612). Applied uniformly to pre-OTP droppers.<br>
+    LBE Intuit 🟠/🟢 (Mar '26): 🟠 = DUP_EMAIL 575 / entry 3,912; 🟢 = TOS impressions 283 / entry 3,912. CVRs back-calc'd from 460 total completions × 69% post-auth rate.<br>
+    Cohort %s from 3-day sample windows. CVRs are estimates — see funnel-measurement-patterns.md §Math-First for derivation.
+  </p>
 </div>
 
 <div class="mermaid">
@@ -39,48 +101,52 @@ flowchart TD
     classDef drop fill:#fee2e2,stroke:#ef4444,color:#7f1d1d
     classDef completion fill:#dcfce7,stroke:#22c55e,color:#14532d
     classDef removed fill:#f3e8ff,stroke:#a855f7,color:#4a044e
+    classDef cat1 fill:#fef9c3,stroke:#ca8a04,color:#713f12
+    classDef cat2a fill:#fce7f3,stroke:#be185d,color:#831843
+    classDef cat3 fill:#e0e7ff,stroke:#4f46e5,color:#1e1b4b
 
     ENTRY["**Funnel Entry**\nBE: seamless-registration\nfilter: request_url='/signup/lbe' + refUrl LIKE '%intuit%'\n**483**"]:::frontend
 
-    ENTRY -->|"~51%"| PII_FORM["**PII Form**\nseamless-registration / personalInfo\nname + email + DOB\nimpression: **246**"]:::frontend
-    ENTRY -->|"~49%"| PHONE_PATH["**Phone Entry**\nseamless-registration / phoneInfoContinue\nimpression: **237** · submit: **109**"]:::frontend
+    ENTRY -->|"🔵🟠🟢 ~51%"| PII_FORM["**PII Form**\nseamless-registration / personalInfo\nname + email + DOB\nimpression: **246**"]:::frontend
+    ENTRY -->|"🔵🟢 ~49%"| PHONE_PATH["**Phone Entry**\nseamless-registration / phoneInfoContinue\nimpression: **237** · submit: **109**"]:::frontend
 
     PII_FORM -->|"**~166** terminal\n(form bounce)"| DROP_PII_BOUNCE(["Drop"]):::drop
 
-    PII_FORM -->|"email recognized"| DUP_EMAIL["**Email Recognition**\nseamless-registration\nduplicateEmailRedirectToLogin\n**10**"]:::frontend
-    DUP_EMAIL --> LOGIN_AUTH["**Login Screens**\nlogin-unknown · login-options · login-password-options\n28 · 27 · 15\n⚠️ login-options not in current funnel"]:::frontend
-    LOGIN_AUTH --> LOGIN_OTC["**Login OTC / UMP**\nlogin-otc-entry-phone\nimpression: **20** · submit: **19**\n(called ump-enter-otc in current funnel)"]:::frontend
-    LOGIN_OTC -->|"auth success"| POST_AUTH_ENTRY
-    LOGIN_AUTH -->|"password auth success"| POST_AUTH_ENTRY
-    LOGIN_AUTH -->|"drops"| DROP_LOGIN(["Drop"]):::drop
+    PII_FORM -->|"🟠 email recognized"| DUP_EMAIL["**Email Recognition**\nseamless-registration\nduplicateEmailRedirectToLogin\n**10**"]:::cat1
+    DUP_EMAIL -->|"🟠"| LOGIN_AUTH["**Login Screens**\nlogin-unknown · login-options · login-password-options\n28 · 27 · 15\n⚠️ login-options not in current funnel"]:::cat1
+    LOGIN_AUTH -->|"🟠"| LOGIN_OTC["**Login OTC / UMP**\nlogin-otc-entry-phone\nimpression: **20** · submit: **19**\n(called ump-enter-otc in current funnel)"]:::cat1
+    LOGIN_OTC -->|"🟠 auth success"| POST_AUTH_ENTRY
+    LOGIN_AUTH -->|"🟠 password auth success"| POST_AUTH_ENTRY
+    LOGIN_AUTH -->|"🟠 drops"| DROP_LOGIN(["Drop"]):::drop
 
-    PII_FORM --> PII_SUBMIT["**PII Submit**\nseamless-registration / personalInfoContinue\nsubmit: **70**"]:::frontend
-    PII_SUBMIT --> PHONE_OTP["**Phone OTP**\nseamless-registration / phoneVerificationContinue\nimpression: **178** · submit: **150**\n⚠️ shared event code: PII + phone paths"]:::frontend
+    PII_FORM -->|"🔵🟢"| PII_SUBMIT["**PII Submit**\nseamless-registration / personalInfoContinue\nsubmit: **70**"]:::frontend
+    PII_SUBMIT -->|"🔵🟢"| PHONE_OTP["**Phone OTP**\nseamless-registration / phoneVerificationContinue\nimpression: **178** · submit: **150**\n⚠️ shared event code: PII + phone paths"]:::frontend
 
     PHONE_PATH -->|"**~128** terminal\n(phone bounce)"| DROP_PHONE_BOUNCE(["Drop"]):::drop
-    PHONE_PATH --> SHORT_PII["**Short PII Form**\nseamless-registration / shortPersonalInfo\nimpression: **85** · submit: **50**"]:::frontend
-    SHORT_PII --> PHONE_OTP
+    PHONE_PATH -->|"🔵🟢"| SHORT_PII["**Short PII Form**\nseamless-registration / shortPersonalInfo\nimpression: **85** · submit: **50**"]:::frontend
+    SHORT_PII -->|"🔵🟢"| PHONE_OTP
 
     PHONE_OTP -->|"**~28** terminal"| DROP_OTP(["Drop"]):::drop
-    PHONE_OTP --> PROVE_PENDING["**Prove Pending**\nseamless-registration / proveVerificationPending\n**39** ⚠️ explicit state; not tracked in current funnel"]:::backend
-    PROVE_PENDING -->|"prove fail"| MATCH_FAIL["**Match Fail Recovery**\nseamless-reg / matchFailedReturn\n**30**"]:::frontend
+    PHONE_OTP -->|"🔵🟢"| PROVE_PENDING["**Prove Pending**\nseamless-registration / proveVerificationPending\n**39** ⚠️ explicit state; not tracked in current funnel"]:::backend
+    PROVE_PENDING -->|"prove fail"| MATCH_FAIL["**Match Fail Recovery**\nseamless-reg / matchFailedReturn\n**30**"]:::cat2a
     MATCH_FAIL -->|"drops"| DROP_MATCH(["Drop"]):::drop
-    PROVE_PENDING -->|"prove success\nnew user"| TOS["**TOS Acceptance**\nseamless-reg / termsContinue\nimpression: **75** · submit: **66**"]:::frontend
-    TOS --> POST_AUTH_ENTRY
-    PROVE_PENDING -->|"prove success\nreturning user"| POST_AUTH_ENTRY
+    PROVE_PENDING -->|"🟢 prove success\nnew user"| TOS["**TOS Acceptance**\nseamless-reg / termsContinue\nimpression: **75** · submit: **66**"]:::cat3
+    TOS -->|"🟢"| POST_AUTH_ENTRY_ENTRY
+    PROVE_PENDING -->|"prove success\n🔵 phone match — skip TOS"| POST_AUTH_ENTRY
 
     POST_AUTH_ENTRY["**Post-Auth Entry**\n(all authenticated paths converge)"]:::backend
     POST_AUTH_ENTRY -.->|"survey: ~8% of entrants"| SURVEY["**Survey Flow ⚠️ Removed**\nseamless-reg / takeSurvey\nimpression: **39** · exitSurvey submit: **19**"]:::removed
 
-    POST_AUTH_ENTRY --> REPORT_PULL["**Report Pull Interstitial**\nreport-pull-interstitial\n**70**"]:::frontend
-    REPORT_PULL -->|"~86% of post-auth\n(vs ~33% today)"| LBE_OFFER["**Offer Quality Form**\nlbe-seamless-reg / offerQualitySubmit\nimpression: **60** · submit: **48**"]:::frontend
-    REPORT_PULL -->|"~14% direct"| INTUIT_CARD
+    POST_AUTH_ENTRY -->|"🔵🟠🟢"| REPORT_PULL["**Report Pull Interstitial**\nreport-pull-interstitial\n**70**"]:::frontend
+    REPORT_PULL -->|"🔵🟠🟢 ~86% of post-auth\n(vs ~33% today)"| LBE_OFFER["**Offer Quality Form**\nlbe-seamless-reg / offerQualitySubmit\nimpression: **60** · submit: **48**"]:::frontend
+    REPORT_PULL -->|"🔵🟠🟢 ~14% direct"| INTUIT_CARD
     LBE_OFFER -->|"drops"| DROP_OFFER(["Drop"]):::drop
-    LBE_OFFER --> INTUIT_CARD["**Intuit Offer Card ⚠️ Removed**\nintuit / ExpandOfferDetails\n**34**"]:::removed
+    LBE_OFFER -->|"🔵🟠🟢"| INTUIT_CARD["**Intuit Offer Card ⚠️ Removed**\nintuit / ExpandOfferDetails\n**34**"]:::removed
     INTUIT_CARD -->|"**~15** terminal\n(saw card, didn't click)"| DROP_INTUIT(["Drop"]):::drop
-    INTUIT_CARD -->|"PersonalLoanClick\n**19**"| MARKETPLACE
+    INTUIT_CARD -->|"🔵🟠🟢 PersonalLoanClick\n**19**"| MARKETPLACE
 
     MARKETPLACE["**Completion**\nBE: personal-loan-marketplace\nfirst impression\n**17** (3.5%)"]:::completion
+
 </div>
 
 <script>mermaid.initialize({ startOnLoad: true, theme: 'base' });</script>

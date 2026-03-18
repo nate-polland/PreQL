@@ -92,5 +92,5 @@ Note: flags are INT64 (0/1) except where noted as BOOL.
 - `osType` (STRING) — operating system
 
 ## Columns to Use With Care
-- `payoutExclusion` (INT64) — excluded from payout calculations; check before summing `amount`
+- `payoutExclusion` (INT64) — three-state field: `NULL` = exclusion tracking not applicable (include), `0` = applicable and NOT excluded (include), `1` = applicable and excluded (drop). **Correct filter: `(payoutExclusion IS NULL OR payoutExclusion = 0)`.** Do not use `IS NULL` alone — drops 29% of valid rows (primarily PL and CC). See `Context/revenue-attribution.md`.
 - `tuFakeUserClick` (INT64) — fake/test user click; filter `= 0` for production queries

@@ -18,13 +18,17 @@ PreQL has three core functions:
 
 | Command | What it does |
 |---|---|
-| `/help-preql` | Overview of capabilities and commands |
-| `/onboard` | Guided setup walkthrough (connection check, orientation, sample query) |
-| `/funnel-discovery` | Works with you to map a new product funnel end-to-end and saves it as a reusable doc |
-| `/add-table-schema` | Works with you to document a new BigQuery table for the team |
-| `/contribute` | Push local changes (new schemas, funnels, fixes) back to the shared repo |
+| `/funnel-discovery` | Maps a new product funnel end-to-end and saves it as a reusable doc |
+| `/funnel-decomposition` | Decomposes a documented funnel into cohorts — % of users and completion rate |
+| `/experiment-design` | Power calculation + hypothesis doc + Darwin setup checklist |
+| `/metric-investigation` | Diagnoses an unexpected metric movement — data quality first |
+| `/add-table-schema` | Documents a new BigQuery table for the team |
+| `/data-lineage` | Traces where a table comes from and whether it's reliable |
+| `/contribute` | Push local changes back to the shared repo |
+| `/sync` | Pull the latest updates from GitHub safely |
+| `/help-preql` | Full overview of all commands and capabilities |
 
-`/funnel-discovery` and `/add-table-schema` are interactive workflows — they ask questions, run diagnostics, and write documentation that becomes available to everyone on the team.
+Type `/help-preql` at any time to see the complete list.
 
 ---
 

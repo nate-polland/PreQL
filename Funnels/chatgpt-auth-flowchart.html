@@ -12,9 +12,27 @@
     .legend-item { display: flex; align-items: center; gap: 6px; }
     .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid; }
     .mermaid { max-width: 1200px; margin: 0 auto; }
+    .fc { margin-bottom: 20px; overflow-x: auto; }
+    .fc table { border-collapse: collapse; font-size: 12px; white-space: nowrap; }
+    .fc th, .fc td { padding: 4px 10px; border: 1px solid #e5e7eb; text-align: center; }
+    .fc td:first-child { text-align: left; font-weight: 500; color: #374151; }
+    .fc th { background: #f9fafb; font-weight: 600; }
+    .fc th.cur { background: #fef9c3; }
+    .fc td.cur { background: #fefce8; }
+    .fc .note { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+    .funnel-nav { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .funnel-nav a { padding: 5px 12px; border-radius: 4px; font-size: 13px; text-decoration: none; background: #f1f5f9; color: #374151; border: 1px solid #e2e8f0; }
+    .funnel-nav a:hover { background: #e2e8f0; }
+    .funnel-nav a.current { background: #1e40af; color: #fff; border-color: #1e40af; font-weight: 600; pointer-events: none; }
   </style>
 </head>
 <body>
+  <div class="funnel-nav">
+    <a href="chatgpt-auth-flowchart.html" class="current">ChatGPT Auth</a>
+    <a href="lbe-intuit-flowchart.html">LBE Intuit (current)</a>
+    <a href="lbe-intuit-2025-flowchart.html">LBE Intuit Sep 2025</a>
+    <a href="lbe-ck-origin-2025-flowchart.html">LBE CK-Origin Sep 2025</a>
+  </div>
   <h2>ChatGPT Authentication Funnel</h2>
   <div class="subtitle">Primary source: BE = sponge_BigEvent &nbsp;|&nbsp; SRRF = gap-fill only &nbsp;|&nbsp; ~ = estimated &nbsp;|&nbsp; ⚠️ = caveat &nbsp;|&nbsp; Counts: Jan 1 – Mar 17, 2026 &nbsp;|&nbsp; Drop counts = terminal (mutually exclusive, sum to 4,064 = 11,549 entry − 7,488 completions)</div>
   <div class="legend">
@@ -22,61 +40,110 @@
     <div class="legend-item"><div class="swatch" style="background:#fef3c7;border-color:#f59e0b"></div> Back-end (no screen)</div>
     <div class="legend-item"><div class="swatch" style="background:#fee2e2;border-color:#ef4444"></div> Drop</div>
     <div class="legend-item"><div class="swatch" style="background:#dcfce7;border-color:#22c55e"></div> Completion</div>
+    <div class="legend-item">🔵 Phone match (Prove success → existing account)</div>
+    <div class="legend-item">🟠 PII match (login / credential path)</div>
+    <div class="legend-item">🟢 New user (TOS path → new account)</div>
+    <div class="legend-item"><em style="font-size:12px;color:#666">No dot = matchFailed or bounce (not a user type)</em></div>
   </div>
+  <div class="fc">
+    <table>
+      <thead><tr>
+        <th>Path / Feature</th>
+        <th class="cur">ChatGPT</th>
+        <th>LBE Intuit</th>
+        <th>LBE Intuit '25</th>
+        <th>LBE CK '25</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>PII form (full)</td>           <td class="cur">—</td>      <td>✅ ~89%</td>   <td>✅ ~51%</td>   <td>✅ ~64%</td></tr>
+        <tr><td>Phone-first entry</td>         <td class="cur">✅ 100%</td> <td>✅ minor</td>  <td>✅ ~49%</td>   <td>✅ ~36%</td></tr>
+        <tr><td>Login path (Cat 1)</td>        <td class="cur">✅ 38%</td>  <td>✅ 16%</td>   <td>✅ 10%</td>    <td>✅ 23%</td></tr>
+        <tr><td>matchFailed (Cat 2a)</td>      <td class="cur">✅ 3%</td>   <td>✅ 2%</td>    <td>✅ 4%</td>     <td>✅ 14% ⚠️</td></tr>
+        <tr><td>TOS → new account (Cat 3)</td> <td class="cur">✅ 1%</td>   <td>✅ 4%</td>    <td>✅ 11% *</td>  <td>✅ 2%</td></tr>
+        <tr><td>Prove-returning, skip TOS (Cat 2b)</td><td class="cur">✅ 46%</td><td>—</td>  <td>—</td>        <td>—</td></tr>
+        <tr><td>Report pull interstitial</td>  <td class="cur">—</td>      <td>✅</td>        <td>✅</td>        <td>✅</td></tr>
+        <tr><td>Offer quality form</td>        <td class="cur">—</td>      <td>✅ 33%</td>   <td>✅ 86%</td>    <td>✅ 27%</td></tr>
+        <tr><td>Intuit offer card</td>         <td class="cur">—</td>      <td>—</td>        <td>✅ removed</td><td>—</td></tr>
+        <tr><td>Survey flow</td>               <td class="cur">—</td>      <td>—</td>        <td>✅ removed</td><td>—</td></tr>
+        <tr><td>Completion: consent click</td> <td class="cur">✅</td>     <td>—</td>        <td>—</td>        <td>—</td></tr>
+        <tr><td>Completion: marketplace</td>   <td class="cur">—</td>      <td>✅</td>        <td>✅</td>        <td>✅</td></tr>
+        <tr style="border-top:2px solid #e5e7eb"><td colspan="5" style="text-align:left;font-weight:600;background:#f9fafb;font-size:11px;color:#6b7280;padding:6px 10px">COHORT MIX AT ENTRY — first-signal classification; pre-signal droppers allocated by same ratio</td></tr>
+        <tr><td>🔵 Phone match (% entry)</td>  <td class="cur">~73% †</td>  <td>&lt;1% ‡</td>  <td>~0%</td>       <td>~1%</td></tr>
+        <tr><td>🔵 Phone match CVR</td>         <td class="cur">~80%</td>   <td>~70%</td>    <td>—</td>         <td>—</td></tr>
+        <tr><td>🟠 PII/cred match (% entry)</td><td class="cur">~26%</td>   <td>~15% §</td>  <td>~6%</td>       <td>~24%</td></tr>
+        <tr><td>🟠 PII/cred CVR</td>            <td class="cur">~37%</td>   <td>~46%</td>    <td>—</td>         <td>—</td></tr>
+        <tr><td>🟢 New user (% entry)</td>      <td class="cur">~1%</td>    <td>~7% §</td>   <td>~16% *</td>    <td>~3%</td></tr>
+        <tr><td>🟢 New user CVR</td>            <td class="cur">~98%</td>   <td>~62%</td>    <td>0% *</td>      <td>~85%</td></tr>
+        <tr><td>Unclassified bounce</td>        <td class="cur">~0%</td>    <td>~78%</td>    <td>~78%</td>      <td>~72%</td></tr>
+      </tbody>
+    </table>
+    <p class="fnote">
+      * Cat 3 LBE Intuit Sep '25 = 0% cvr (proveVerificationPending issue, fixed Mar '26)<br>
+      † ChatGPT 🔵: 73% of OTP impressions skip PII entirely (OTP impression = 10,427; skip-PII path = ~7,612). Applied uniformly to pre-OTP droppers.<br>
+      ‡ LBE Intuit 🔵: back-calc from POST_AUTH sources: 667 post-auth − ~387 Cat2 (DUP_EMAIL 575 minus login drops) − ~255 Cat3 (new accounts) ≈ 25 phone match.<br>
+      § LBE Intuit 🟠/🟢: 🟠 = DUP_EMAIL 575 / entry 3,912; 🟢 = TOS impressions 283 / entry 3,912. CVRs = completions back-calc'd from 460 total × 69% post-auth rate.<br>
+      Cohort %s from 3-day sample windows. CVRs are estimates — see funnel-measurement-patterns.md §Math-First for derivation.
+    </p>
+  </div>
+
   <div class="mermaid">
 flowchart TD
     classDef frontend fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
     classDef backend fill:#fef3c7,stroke:#f59e0b,color:#78350f
     classDef drop fill:#fee2e2,stroke:#ef4444,color:#7f1d1d
     classDef completion fill:#dcfce7,stroke:#22c55e,color:#14532d
+    classDef cat1 fill:#fef9c3,stroke:#ca8a04,color:#713f12
+    classDef cat2a fill:#fce7f3,stroke:#be185d,color:#831843
+    classDef cat3 fill:#e0e7ff,stroke:#4f46e5,color:#1e1b4b
 
     ENTRY["**Funnel Entry**\nBE: seamless-registration\nfilter: request_refUrl LIKE '%chatgpt%'\n**11,549**"]:::frontend
 
-    ENTRY --> PHONE["**Phone Entry**\nseamless-reg / phoneInfoContinue\n**11,549**"]:::frontend
-    PHONE -->|"**1,332** terminal"| DROP_PHONE(["Drop"]):::drop
+    ENTRY -->|"🔵🟠🟢"| PHONE["**Phone Entry**\nseamless-reg / phoneInfoContinue\n**11,549**"]:::frontend
+    PHONE -->|"🔵🟠🟢 **1,332** terminal"| DROP_PHONE(["Drop"]):::drop
 
-    PHONE --> OTP["**OTP Verify**\nseamless-reg / phoneVerificationContinue\nimpression: 10,427 · submit: 8,498"]:::frontend
-    OTP -->|"**933** terminal"| DROP_OTP(["Drop"]):::drop
+    PHONE -->|"🔵🟠🟢"| OTP["**OTP Verify**\nseamless-reg / phoneVerificationContinue\nimpression: 10,427 · submit: 8,498"]:::frontend
+    OTP -->|"🔵🟠🟢 **933** terminal"| DROP_OTP(["Drop"]):::drop
 
-    OTP -->|"returning user\nrecognized via phone — skip PII\n~73% of OTP"| CONSENT
+    OTP -->|"🔵 returning user\nrecognized via phone — skip PII\n~73% of OTP"| CONSENT
 
-    OTP --> NOT_SUPPORTED["**Not Supported**\nlink-chatgpt-not-supported\ncontinueClick → login redirect\n**601**"]:::frontend
-    NOT_SUPPORTED -->|"**88** terminal"| DROP_NS(["Drop"]):::drop
-    NOT_SUPPORTED --> LOGIN_REDIR
+    OTP -->|"🟠"| NOT_SUPPORTED["**Not Supported**\nlink-chatgpt-not-supported\ncontinueClick → login redirect\n**601**"]:::frontend
+    NOT_SUPPORTED -->|"🟠 **88** terminal"| DROP_NS(["Drop"]):::drop
+    NOT_SUPPORTED -->|"🟠"| LOGIN_REDIR
 
-    OTP --> MCP_TFA["**MCP 2FA Enrolled**\nlink-mcp-twofa-enrolled\n**380**"]:::frontend
-    MCP_TFA -->|"**33** terminal"| DROP_MCP(["Drop"]):::drop
-    MCP_TFA --> LOGIN_REDIR
+    OTP -->|"🟠"| MCP_TFA["**MCP 2FA Enrolled**\nlink-mcp-twofa-enrolled\n**380**"]:::frontend
+    MCP_TFA -->|"🟠 **33** terminal"| DROP_MCP(["Drop"]):::drop
+    MCP_TFA -->|"🟠"| LOGIN_REDIR
 
-    OTP --> PII["**PII Form**\nseamless-reg / shortPersonalInfo\nimpression: 2,544 · submit: 1,151"]:::frontend
+    OTP -->|"🟠🟢"| PII["**PII Form**\nseamless-reg / shortPersonalInfo\nimpression: 2,544 · submit: 1,151"]:::frontend
 
-    PII -->|"**257** terminal"| DROP_PII(["Drop"]):::drop
-    PII -->|"matchFailedReturn"| MATCH_FAIL["**Match Fail Recovery**\nreg-step-1 / login-unknown"]:::frontend
+    PII -->|"🟠🟢 **257** terminal"| DROP_PII(["Drop"]):::drop
+    PII -->|"matchFailedReturn (no segment)"| MATCH_FAIL["**Match Fail Recovery**\nreg-step-1 / login-unknown"]:::cat2a
     MATCH_FAIL -->|"**305** terminal"| DROP_MATCH(["Drop"]):::drop
 
-    PII --> LOGIN_REDIR["**Login Redirect**\nBE: login-web-redirect\n**961**"]:::frontend
-    LOGIN_REDIR -->|"**22** terminal"| DROP_LR(["Drop"]):::drop
+    PII -->|"🟠"| LOGIN_REDIR["**Login Redirect**\nBE: login-web-redirect\n**961**"]:::cat1
+    LOGIN_REDIR -->|"🟠 **22** terminal"| DROP_LR(["Drop"]):::drop
 
-    PII --> PROVE["**Prove API Call**\nbackend — SRRF proxy"]:::backend
+    PII -->|"🟠🟢"| PROVE["**Prove API Call**\nbackend — SRRF proxy"]:::backend
     PROVE -->|"prove fail — retry\nmatchFailedReturn on resubmit"| MATCH_FAIL
-    PROVE -->|"Prove success\nreturning user — no TOS"| CONSENT
-    PROVE --> TOA["**TOS Acceptance**\nseamless-reg / termsContinue\nSRRF: completed_toa = 1\n**116** (SRRF)\n⚠️ BE undercounts — stitch via cookieId"]:::frontend
-    TOA -->|"**2** terminal"| DROP_TOA(["Drop"]):::drop
-    TOA --> ACCT["**New Account Created**\nSRRF: regLog_account_created=0\n**114**"]:::backend
-    ACCT --> CONSENT
+    PROVE -->|"🟠 Prove success\nPII match — no TOS"| CONSENT
+    PROVE -->|"🟢"| TOA["**TOS Acceptance**\nseamless-reg / termsContinue\nSRRF: completed_toa = 1\n**116** (SRRF)\n⚠️ BE undercounts — stitch via cookieId"]:::cat3
+    TOA -->|"🟢 **2** terminal"| DROP_TOA(["Drop"]):::drop
+    TOA -->|"🟢"| ACCT["**New Account Created** (backend)\nSRRF: regLog_account_created=0\n**114**"]:::cat3
+    ACCT -->|"🟢"| CONSENT
 
-    LOGIN_REDIR -->|"standard path"| AUTH["**Password / 2FA / Recovery**\nlogin-password-options\nlogin-unknown-failed-password\nlogin-verification-option-from-login\nforce-2fa-* / recovery-*\n**1,689**"]:::frontend
-    AUTH -->|"**1,020** terminal"| DROP_AUTH(["Drop"]):::drop
-    AUTH --> CONSENT
+    LOGIN_REDIR -->|"🟠 standard path"| AUTH["**Password / 2FA / Recovery**\nlogin-password-options\nlogin-unknown-failed-password\nlogin-verification-option-from-login\nforce-2fa-* / recovery-*\n**1,689**"]:::cat1
+    AUTH -->|"🟠 **1,020** terminal"| DROP_AUTH(["Drop"]):::drop
+    AUTH -->|"🟠"| CONSENT
 
-    LOGIN_REDIR -->|"UMP path\nlogin-unknown-password-disabled-text"| UMP["**UMP Phone Verify**\nump-phone-verify\n**746**"]:::frontend
-    UMP --> UMP_OTC["**Enter OTP**\nump-enter-otc\n**705**"]:::frontend
-    UMP_OTC -->|"**72** terminal"| DROP_UMP(["Drop"]):::drop
-    UMP_OTC --> UMP_2FA["**UMP 2FA**\nump-2fa-iframe-container\nump-2fa-success-redirect\n**39**"]:::frontend
-    UMP_2FA --> CONSENT
-    UMP_OTC --> CONSENT
+    LOGIN_REDIR -->|"🟠 UMP path\nlogin-unknown-password-disabled-text"| UMP["**UMP Phone Verify**\nump-phone-verify\n**746**"]:::cat1
+    UMP -->|"🟠"| UMP_OTC["**Enter OTP**\nump-enter-otc\n**705**"]:::cat1
+    UMP_OTC -->|"🟠 **72** terminal"| DROP_UMP(["Drop"]):::drop
+    UMP_OTC -->|"🟠"| UMP_2FA["**UMP 2FA**\nump-2fa-iframe-container\nump-2fa-success-redirect\n**39**"]:::cat1
+    UMP_2FA -->|"🟠"| CONSENT
+    UMP_OTC -->|"🟠"| CONSENT
 
     CONSENT["**Completion**\nBE: link-chatgpt / link-mcp\nagreeClick\n**7,488**"]:::completion
+
   </div>
   <script>mermaid.initialize({ startOnLoad: true, theme: 'default' });</script>
 </body>
