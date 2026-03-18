@@ -211,6 +211,42 @@ The following screens appear in the ChatGPT refUrl cohort but are **not part of 
 - ~80–170 sec: Recovery loops (if account recovery needed)
 - Up to 450 sec (7.5 min): Extreme recovery cases before drop-off
 
+## Recent Metrics
+
+Full step counts — use these to calculate any conversion/drop rate without requerying. Append a new snapshot when counts are refreshed.
+
+### Snapshot: Jan 1 – Mar 17, 2026 (pulled 2026-03-17)
+
+| Step | Screen / Event | Count | Unit |
+|---|---|---|---|
+| Entry | seamless-registration (request_refUrl LIKE '%chatgpt%') | 11,549 | cookies |
+| Phone entry impression | seamless-reg / phoneInfoContinue | 11,549 | cookies |
+| Phone drop (terminal) | — | 1,332 | cookies |
+| OTP verify impression | seamless-reg / phoneVerificationContinue type 1 | 10,427 | cookies |
+| OTP submit | seamless-reg / phoneVerificationContinue type 2 | 8,498 | cookies |
+| OTP drop (terminal) | — | 933 | cookies |
+| Not Supported screen | link-chatgpt-not-supported | 601 | cookies |
+| Not Supported drop (terminal) | — | 88 | cookies |
+| MCP 2FA Enrolled screen | link-mcp-twofa-enrolled | 380 | cookies |
+| MCP 2FA drop (terminal) | — | 33 | cookies |
+| PII form impression | seamless-reg / shortPersonalInfo type 1 | 2,544 | cookies |
+| PII submit | seamless-reg / shortPersonalInfo type 2 | 1,151 | cookies |
+| PII drop (terminal) | — | 257 | cookies |
+| Match fail recovery | seamless-reg / matchFailedReturn | — | — |
+| Match fail drop (terminal) | — | 305 | cookies |
+| Login redirect | login-web-redirect | 961 | cookies |
+| Login redirect drop (terminal) | — | 22 | cookies |
+| Password / 2FA / Recovery screens | login-password-options + variants | 1,689 | cookies |
+| Auth drop (terminal) | — | 1,020 | cookies |
+| UMP phone verify | ump-phone-verify | 746 | cookies |
+| UMP enter OTP | ump-enter-otc | 705 | cookies |
+| UMP drop (terminal) | — | 72 | cookies |
+| UMP 2FA | ump-2fa-iframe-container | 39 | cookies |
+| TOS impression | seamless-reg / termsContinue (SRRF) | 116 | cookies |
+| TOS drop (terminal) | — | 2 | cookies |
+| New account created | SRRF regLog_account_created=0 | 114 | cookies |
+| **Completion** | link-chatgpt / link-mcp + agreeClick | **7,488** | cookies |
+
 ## Open Questions
 - **✅ RESOLVED — New-user TOS screen** — `termsContinue` DOES fire in BigEvent within `seamless-registration`, but **pre-auth on a different traceId** than the completion event. A new traceId is created at authentication — stitch via `cookieId` to connect pre-auth TOS to post-auth `agreeClick`. Also trackable via SRRF `completed_toa = 1`, validated against `matchedMembers.validationTs` at 94%.
 - **✅ RESOLVED — `regLog_account_created` is an inverted flag** — `1` = failure, `0` = success. Validated across all affiliates: `account_created=0` + `completed_toa=1` matches matchedMembers at 92%; `account_created=1` matches at <1%. The 74 OpenAI users with `account_created=1` were account creation failures, not successes. Use `completed_toa=1` AND `regLog_account_created=0` as the new-user completion definition.
