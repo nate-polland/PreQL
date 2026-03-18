@@ -47,14 +47,21 @@ Only after Phase 2 alignment is confirmed:
    - **Sequential event tables** (e.g., BigEvent): one row per event with timestamps — can build per-user ordered paths directly
    - **Pre-aggregated summary tables** (e.g., SRRF): one row per user with binary flags — shows what steps were hit but not timestamps or ordering. Use these to understand path patterns; go to the event table for sequential traces.
 2. **Sample the completion anchor** (LIMIT 5, tight date window) — confirm field names, timestamp format, and that the filter returns expected records
-3. **Validate the anchor table** — before building anything on it, check:
+3. **Verify the anchor is funnel-specific** — some screens (consent screens, marketplace pages, login redirects) are shared across multiple integrations. Before building anything on an anchor, cross-check: of all users who hit the anchor screen, what fraction also have the entry filter within the session window? If the anchor has large volume with no plausible entry-cohort match, it's likely shared. Example failure mode: `link-anywhere` appeared to be an LBE completion screen but was shared across all Intuit integrations — only 10 of 3,912 LBE entrants hit it.
+4. **Validate the anchor table** — before building anything on it, check:
    - Daily volume regularity (2–3 weeks) — zero-volume days followed by spikes indicate batch writes, not real-time tracking
    - Field completeness — are the join keys (numericId, traceId, cookieId, etc.) populated?
    - Timestamp reliability — is the timestamp when the event occurred, or when the record was written?
    - For binary flags: validate semantics against a ground truth table — flags can be inverted (e.g., `1` = failure, not success). Always check before assuming.
    - If the anchor fails these checks, find a better one before proceeding
-4. **Find a tight time window** — use a 1–3 day window with stable, representative volume. Target 20–100 completers. Avoid `LIMIT` across a wide date range.
-5. **Confirm the window with the user** before running any joins.
+5. **Find a tight time window** — use a **3-day window** with stable, representative volume. Target 20–100 completers. Avoid `LIMIT` across a wide date range. Use 3 days (not 1) from the start — rare screens (e.g., branded offer cards, survey flows, 2FA paths) only appear in 3+ day samples; a 1-day window will miss them and force a second join query.
+6. **Confirm the window with the user** before running any joins.
+7. **Run broad screen inventory as your first BigEvent join** — before any per-user path traces, run:
+   ```sql
+   GROUP BY content_screen, system_eventCode, system_eventType,
+   COUNT(DISTINCT [stitch_key]) AS cookies
+   ```
+   over the full entry cohort with the extended session window. One async query gives you the complete screen inventory — every screen and volume combination — before you trace a single user. This eliminates the round-trip pattern of "trace user → discover new screen → trace again." Per-user path traces (Phase 4 Stage 1) are then used to understand *ordering and transitions* within the known screen set, not to discover new screens.
 
 ### Query Execution
 The BigQuery MCP connection times out at ~60s. For large event table joins, use the project's async script (`bq_async.sh`). For smaller tables, MCP is fine.
@@ -79,6 +86,8 @@ If users start unauthenticated:
 The mental model is always top-down, even if data discovery required starting from the end. Building the funnel has two stages: **structure first, then counts.**
 
 ### Stage 1: Build the structure (small sample)
+
+**Prerequisite:** The broad screen inventory (Phase 2b step 7) must be complete before this stage. You already know every screen that exists in the funnel — per-user path traces here are to understand *ordering and transitions*, not to discover new screens.
 
 Start with 1–2 users. Build their full per-user ordered event sequences. Understand their paths. Then validate with 3–4 more. Only widen after structure is stable.
 
@@ -157,10 +166,12 @@ Two types of drop-off:
 - **Disappearance**: user completed an action on step A, but step B never fired (possible technical failure or tracking gap) — last event was an action (`system_eventType IN (2, 3)`)
 
 Steps:
-1. Count users who reached early steps but NOT the completion event
-2. Use pre-auth identifiers (cookieId, traceId) for unauthenticated dropoffs
-3. For each non-completer, find their last event and classify as organic vs. disappearance based on `system_eventType`
-4. Group by last screen + dropout type — this surfaces the primary dropout locations
+1. **Broad scan first** — before filtering to a predefined screen list, run a wide query: for all non-completers, what `content_screen` values did they hit within the session window? Group by screen, order by user count. This surfaces the full set of dropout screens — pre-defining the list from the flowchart alone will miss drops at screens not yet mapped (typically 30–40% of drops in complex funnels).
+2. Use the broad scan results to build the predefined screen list for the detailed query
+3. Count users who reached early steps but NOT the completion event
+4. Use pre-auth identifiers (cookieId, traceId) for unauthenticated dropoffs
+5. For each non-completer, find their last event and classify as organic vs. disappearance based on `system_eventType`
+6. Group by last screen + dropout type — this surfaces the primary dropout locations
 
 See `Context/funnel-measurement-patterns.md` Pattern 3 for the SQL template.
 
@@ -185,11 +196,14 @@ Document contents:
 - Session window (user estimate + buffer, note if empirically validated)
 - User types and validated paths (with sample size)
 - Step/screen map table
+- Recent Metrics (full step counts — see below)
 - Timing from entry point
 - Drop-off paths and types (organic vs disappearance)
 - Open questions / things not yet validated
 - Tables used
 - Experiments (optional — omit section entirely if no experiments are attached)
+
+**`## Recent Metrics` section format:** A dated snapshot table of every funnel step with its raw count. Include one row per step — impression count, submit count, terminal drop count. This allows any conversion or drop rate to be calculated from the doc without requerying. Append a new snapshot when counts are refreshed; keep prior snapshots for trend context.
 
 Report: "Funnel documented at `Funnels/[funnel-name].md`. Ready for funnel queries."
 

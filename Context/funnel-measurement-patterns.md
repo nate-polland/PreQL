@@ -55,7 +55,7 @@ FROM session_steps
 **Notes:**
 - Use `completed` in the denominator for cross-step rates only when measuring "of those who reached A, how many reached B"
 - For cross-auth funnels: gate stitch key on `COUNT(DISTINCT numericId) = 1` per stitch key before joining (see `Context/cross-table-joins.md`)
-- Always add at least 1 day of buffer on the event join date range to catch sessions that span midnight
+- **Session window buffer:** `+1 day` is sufficient when completion happens during authentication (e.g., a consent click). For funnels where completion is a downstream product screen reached after authentication and a credit pull (e.g., a loan marketplace page), extend to `+3 days` — the post-auth sequence can span multiple sessions if the user returns. Check the funnel doc's `## Session Window` section for the validated buffer.
 
 ---
 
@@ -256,6 +256,81 @@ else:
 - Requires clean arm separation — never mix users across arms
 - Darwin `cookieId` and `deviceId` columns are **NULL for USER-type experiments** (validated on mt_final_71788 — 100% null). For standard USER-type experiments, the join is `numericId` only, meaning the experiment population is inherently post-auth. For funnels starting unauthenticated, this creates a survivorship bias in the denominator — the experiment can only measure users who authenticated. Check `testType` on the Darwin table before assuming pre-auth identifiers are available.
 - Partial experiment periods (ramping up or recently ended) require date filtering to a stable ramp window
+
+---
+
+## Pattern 7 — Cross-Funnel Cohort Classification
+
+Classifies each funnel entrant into a user-type cohort based on which signal screens they hit, then measures per-cohort conversion. Useful for understanding funnel mix across time periods or between funnels.
+
+**Cohort signals (auth funnels):**
+- **Cat1 — Recognized login:** hit `login-*` or `ump-*` screens (existing user recognized at entry or mid-flow)
+- **Cat2a — Match failed:** hit `matchFailedReturn` (existing user, Prove couldn't verify)
+- **Cat3 — New user:** hit `termsContinue` (TOS acceptance = net-new account)
+- **Cat2b — Prove-returning:** completed without login screens, TOS, or matchFailed (existing user recognized by Prove mid-flow, skips TOS)
+- **Bouncer:** no signal screens, no completion
+
+**Priority order:** Cat1 > Cat2a > Cat3 > Cat2b > Bouncer. Apply as a CASE WHEN chain — a user who hit both login and matchFailed is Cat1.
+
+```sql
+WITH entries AS (
+  SELECT user_cookieId, MIN(DATE(ts)) AS entry_date, '[funnel_label]' AS funnel
+  FROM `[event_table]`
+  WHERE DATE(ts) BETWEEN '[start]' AND '[end]'
+    AND [entry_filter]
+  GROUP BY user_cookieId
+  -- UNION ALL additional funnels with different date windows here
+),
+
+screens AS (
+  SELECT e.user_cookieId, e.funnel,
+    MAX(CASE WHEN be.content_screen LIKE 'login%' OR be.content_screen LIKE 'ump%' THEN 1 ELSE 0 END) AS saw_login,
+    MAX(CASE WHEN be.system_eventCode = 'matchFailedReturn'                          THEN 1 ELSE 0 END) AS saw_matchfailed,
+    MAX(CASE WHEN be.system_eventCode = 'termsContinue'                              THEN 1 ELSE 0 END) AS saw_tos,
+    MAX(CASE WHEN [completion_condition]                                              THEN 1 ELSE 0 END) AS completed
+  FROM entries e
+  JOIN `[event_table]` be
+    ON be.user_cookieId = e.user_cookieId
+    AND DATE(be.ts) BETWEEN e.entry_date AND DATE_ADD(e.entry_date, INTERVAL 3 DAY)
+  WHERE DATE(be.ts) BETWEEN '[earliest_entry_start]' AND '[latest_entry_end_plus_3d]'  -- static partition filter
+  GROUP BY e.user_cookieId, e.funnel
+),
+
+classified AS (
+  SELECT *,
+    CASE
+      WHEN saw_login      = 1 THEN 'Cat1_recognized_login'
+      WHEN saw_matchfailed = 1 THEN 'Cat2a_match_failed'
+      WHEN saw_tos        = 1 THEN 'Cat3_new_user'
+      WHEN completed      = 1 THEN 'Cat2b_prove_returning'
+      ELSE 'Bouncer'
+    END AS cohort
+  FROM screens
+)
+
+SELECT funnel, cohort,
+  COUNT(*)                                                              AS users,
+  ROUND(COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY funnel) * 100, 1) AS pct_of_funnel,
+  COUNTIF(completed = 1)                                               AS completers,
+  ROUND(SAFE_DIVIDE(COUNTIF(completed = 1), COUNT(*)) * 100, 1)       AS conv_pct
+FROM classified
+GROUP BY funnel, cohort
+ORDER BY funnel, cohort
+```
+
+**Multi-funnel note:** When using UNION ALL across funnels with different date windows, the static partition filter in the `screens` join must span all windows combined (e.g., `BETWEEN '2025-09-01' AND '2026-03-15'`). If windows are far apart, split into separate queries per time period — a single 6-month scan is expensive.
+
+**Bouncer sub-segmentation (proxy only):** Bouncers have no clean cohort signal, but can be roughly typed by last screen:
+- Saw `personalInfo` impression → likely Cat3 analog (new user who gave up on PII form)
+- Saw `phoneInfoContinueSubmitError` → likely Cat1 analog (phone already registered = existing user)
+- Reached OTP but dropped → apply the Cat2a rate as a proxy for existing-but-unverifiable fraction
+
+Label these estimates as proxies in any output — they are inferred, not directly measured.
+
+**Validated findings (Mar/Sep 2026):**
+- ChatGPT is Cat2b-dominant (46%) — phone-first entry enables Prove recognition without login screens
+- LBE funnels are bouncer-dominant (61–78%) — PII-first entry creates high friction for all cohorts
+- Cat3 in LBE Intuit Sep 2025 showed 0% conversion — traced to `proveVerificationPending` issue, resolved by Mar 2026
 
 ---
 
