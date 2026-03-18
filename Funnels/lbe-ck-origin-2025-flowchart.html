@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LBE / CK-Internal-Origin Auth Funnel — Sep 2025</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: sans-serif; padding: 20px; background: #fff; }
+  h2 { color: #1e3a8a; }
+  .legend { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+  .swatch { width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid; }
+  .sw-frontend { background: #dbeafe; border-color: #3b82f6; }
+  .sw-backend   { background: #fef3c7; border-color: #f59e0b; }
+  .sw-drop      { background: #fee2e2; border-color: #ef4444; }
+  .sw-completion{ background: #dcfce7; border-color: #22c55e; }
+  .note { font-size: 13px; color: #555; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<h2>LBE / CK-Internal-Origin Auth Funnel — Sep 2025</h2>
+<p class="note">
+  Entry: 2,278 cookies (Sep 1–3, 2025, CK-internal origin) · Conversion: 180 / 2,278 = <strong>7.9%</strong><br>
+  Compare: <a href="lbe-intuit-2025-flowchart.html">Intuit Sep 2025</a> (3.5%) · <a href="lbe-intuit-flowchart.html">Intuit Mar 2026</a> (11.8%)
+</p>
+<div class="legend">
+  <div class="legend-item"><div class="swatch sw-frontend"></div> Frontend (user-facing screen)</div>
+  <div class="legend-item"><div class="swatch sw-backend"></div> Backend (system event)</div>
+  <div class="legend-item"><div class="swatch sw-drop"></div> Drop-off node</div>
+  <div class="legend-item"><div class="swatch sw-completion"></div> Completion</div>
+</div>
+
+<div class="mermaid">
+flowchart TD
+    classDef frontend fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+    classDef backend fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    classDef drop fill:#fee2e2,stroke:#ef4444,color:#7f1d1d
+    classDef completion fill:#dcfce7,stroke:#22c55e,color:#14532d
+
+    ENTRY["**Funnel Entry**\nBE: seamless-registration\nfilter: request_url='/signup/lbe' + refUrl LIKE '%creditkarma.com%'\n**2,278**"]:::frontend
+
+    ENTRY -->|"~64%"| PII_FORM["**PII Form**\nseamless-registration / personalInfo\nname + email + DOB\nimpression: **1,460** · submit: **106** ⚠️ 7% submit rate"]:::frontend
+    ENTRY -->|"~36%"| PHONE_PATH["**Phone Entry**\nseamless-registration / phoneInfoContinue\nimpression: **818** · submit: **293**"]:::frontend
+
+    PII_FORM -->|"**~1,272** terminal\n(form bounce)"| DROP_PII(["Drop"]):::drop
+    PII_FORM -->|"email recognized\n**82**"| DUP_EMAIL["**Email Recognition**\nseamless-registration\nduplicateEmailRedirectToLogin"]:::frontend
+    DUP_EMAIL --> LOGIN_PATH
+    PII_FORM --> PII_SUBMIT["**PII Submit**\nseamless-registration / personalInfoContinue\nsubmit: **106**"]:::frontend
+    PII_SUBMIT --> OTP
+
+    PHONE_PATH -->|"phone error **397**\n(phone already registered)"| PHONE_ERROR["**Phone Error**\nseamless-reg / phoneInfoContinueSubmitError\n**397** ⚠️ exceeds submits"]:::frontend
+    PHONE_ERROR -->|"retry or drop"| PHONE_PATH
+    PHONE_PATH --> SHORT_PII["**Short PII Form**\nseamless-registration / shortPersonalInfo\nimpression: **148** · submit: **88**"]:::frontend
+    SHORT_PII --> OTP
+
+    ENTRY -->|"existing members"| LOGIN_PATH["**Login Screens**\nUMP: **461** · login-unknown: **461**\nlogin-unk-step-1-dup: **194**\nverification-option: **105**\nreset-flow: **106** · force-2fa: **90**\nidentity-verify: **72** · update-password: **69**"]:::frontend
+    LOGIN_PATH -->|"auth success"| POST_AUTH_ENTRY
+    LOGIN_PATH -->|"login fails → reg redirect\n**268**"| REG_REDIRECT["**Reg Redirect**\nreg-step-1 / navDestination\n**268**"]:::frontend
+    REG_REDIRECT -->|"drops"| DROP_LOGIN(["Drop"]):::drop
+    LOGIN_PATH -->|"drops"| DROP_LOGIN(["Drop"]):::drop
+
+    OTP["**Phone OTP**\nseamless-registration / phoneVerificationContinue\nimpression: **362** · submit: **331**\n⚠️ shared event code"]:::frontend
+    OTP -->|"drops"| DROP_OTP(["Drop"]):::drop
+    OTP --> PROVE["**Prove API**\n(backend)"]:::backend
+    PROVE -->|"prove fail"| MATCH_FAIL["**Match Fail Recovery**\nseamless-reg / matchFailedReturn\nimpression: **412** · action: **220**\n18% of entries"]:::frontend
+    MATCH_FAIL -->|"most drop"| DROP_MATCH(["Drop"]):::drop
+    MATCH_FAIL -->|"recovery path\n(~53% take action)"| POST_AUTH_ENTRY
+    PROVE -->|"prove success\nnew user"| TOS["**TOS Acceptance**\nseamless-reg / termsContinue\nimpression: **66** · submit: **62**"]:::frontend
+    TOS --> POST_AUTH_ENTRY
+    PROVE -->|"prove success\nreturning user"| POST_AUTH_ENTRY
+
+    POST_AUTH_ENTRY["**Post-Auth Entry**\n(all paths converge)"]:::backend
+    POST_AUTH_ENTRY --> REPORT_PULL["**Report Pull Interstitial**\nreport-pull-interstitial\n**211**"]:::frontend
+    REPORT_PULL -->|"~27% of post-auth"| LBE_OFFER["**Offer Quality Form**\nlbe-seamless-reg / offerQualitySubmit\nimpression: **56** · submit: **55**"]:::frontend
+    REPORT_PULL -->|"~73% direct"| MARKETPLACE
+    LBE_OFFER -->|"drops"| DROP_OFFER(["Drop"]):::drop
+    LBE_OFFER --> MARKETPLACE
+
+    MARKETPLACE["**Completion**\nBE: personal-loan-marketplace\nfirst impression\n**180** (7.9%)"]:::completion
+</div>
+
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base' });</script>
+</body>
+</html>

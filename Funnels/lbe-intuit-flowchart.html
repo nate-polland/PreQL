@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>LBE / Intuit Auth Funnel</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 24px; background: #fff; }
+    h2 { color: #333; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #666; margin-bottom: 4px; }
+    .note { font-size: 12px; color: #888; margin-bottom: 16px; }
+    .legend { display: flex; gap: 20px; margin-bottom: 20px; font-size: 13px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .swatch { width: 14px; height: 14px; border-radius: 3px; border: 1.5px solid; }
+    .mermaid { max-width: 1400px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+  <h2>LBE / Intuit Auth Funnel</h2>
+  <div class="subtitle">Primary source: BE = sponge_BigEvent &nbsp;|&nbsp; SRRF = gap-fill only &nbsp;|&nbsp; ~ = estimated &nbsp;|&nbsp; ⚠️ = caveat &nbsp;|&nbsp; Counts: Mar 1–3, 2026 (3-day window) &nbsp;|&nbsp; Post-auth extended to Mar 1–6 for cross-auth stitching</div>
+  <div class="note">Drop counts are terminal (last funnel event for non-completers). ~1,243 drops not shown — users whose last event was at auth/2FA/TOS screens not yet mapped. Drops shown sum to ~2,209 of 3,452 total drops (3,912 entry − 460 completions).</div>
+  <div class="legend">
+    <div class="legend-item"><div class="swatch" style="background:#dbeafe;border-color:#3b82f6"></div> Front-end (user-facing screen)</div>
+    <div class="legend-item"><div class="swatch" style="background:#fef3c7;border-color:#f59e0b"></div> Back-end (no screen)</div>
+    <div class="legend-item"><div class="swatch" style="background:#fee2e2;border-color:#ef4444"></div> Drop</div>
+    <div class="legend-item"><div class="swatch" style="background:#dcfce7;border-color:#22c55e"></div> Completion</div>
+  </div>
+  <div class="mermaid">
+flowchart TD
+    classDef frontend fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+    classDef backend fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    classDef drop fill:#fee2e2,stroke:#ef4444,color:#7f1d1d
+    classDef completion fill:#dcfce7,stroke:#22c55e,color:#14532d
+
+    ENTRY["**Funnel Entry**\nBE: seamless-registration\nfilter: request_url='/signup/lbe'\n**3,912**"]:::frontend
+
+    ENTRY -->|"~89%"| PII_FORM["**PII Form**\nseamless-registration / personalInfo\nname + email + DOB\nimpression: **3,479**"]:::frontend
+    ENTRY -->|"~11%"| PHONE_PATH["**Phone Entry**\nseamless-registration / phoneInfoContinue\n**419**"]:::frontend
+
+    PII_FORM -->|"**~1,656** terminal\n(form bounce)"| DROP_PII_BOUNCE(["Drop"]):::drop
+
+    PII_FORM -->|"email recognized\nbefore submit"| DUP_EMAIL["**Email Recognition**\nseamless-registration\nduplicateEmailRedirectToLogin\n**575**"]:::frontend
+    DUP_EMAIL -->|"**~23** terminal"| DROP_DUP(["Drop"]):::drop
+    DUP_EMAIL --> LOGIN_AUTH["**Login Screens**\nlogin-unknown-step-1-dup · login-unknown\nlogin-password-options\n205 · 389 · 173"]:::frontend
+    LOGIN_AUTH -->|"**~165** terminal\n(partial — auth screens not fully mapped)"| DROP_LOGIN(["Drop"]):::drop
+    LOGIN_AUTH -->|"auth success"| POST_AUTH_ENTRY
+
+    PII_FORM --> PII_SUBMIT["**PII Submit**\nseamless-registration / personalInfoContinue\nsubmit: **737**"]:::frontend
+    PII_SUBMIT --> PHONE_OTP["**Phone OTP**\nseamless-registration / phoneVerificationContinue\nimpression: **697** · submit: **788**\n⚠️ includes phone-first path users"]:::frontend
+    PHONE_OTP -->|"**~91** terminal\n(68 submitted + 23 impression)"| DROP_PHONE_OTP(["Drop"]):::drop
+    PHONE_OTP --> PROVE["**Prove API Call**\nbackend — SRRF proxy\n**262** ⚠️ may undercount"]:::backend
+    PROVE -->|"prove fail"| MATCH_FAIL["**Match Fail Recovery**\nseamless-reg / matchFailedReturn\n**187**"]:::frontend
+    MATCH_FAIL -->|"**14** terminal"| DROP_MATCH(["Drop"]):::drop
+    PROVE -->|"Prove success\nnew user"| TOS["**TOS Acceptance**\nseamless-reg / termsContinue\nimpression: **283** · submit: **257**\n⚠️ BE undercounts — stitch via cookieId"]:::frontend
+    TOS -->|"**~26** terminal\n(impression − submit)"| DROP_TOS(["Drop"]):::drop
+    TOS --> NEW_ACCT["**New Account Created**\nSRRF: regLog_account_created=0\n~**255**"]:::backend
+    NEW_ACCT --> POST_AUTH_ENTRY
+    PROVE -->|"Prove success\nreturning user — skip TOS"| POST_AUTH_ENTRY
+
+    PHONE_PATH -->|"**~152** terminal\n(phone bounce)"| DROP_PHONE_BOUNCE(["Drop"]):::drop
+    PHONE_PATH --> PHONE_OTP_PATH["**Phone OTP Verify**\nseamless-registration / phoneVerificationContinue\n⚠️ count overlaps with PII path OTP above"]:::frontend
+    PHONE_OTP_PATH --> SHORT_PII["**Short PII Form**\nseamless-registration / shortPersonalInfo\n**95**"]:::frontend
+    SHORT_PII --> PROVE
+
+    POST_AUTH_ENTRY["**Post-Auth Entry**\n(all authenticated paths converge)"]:::backend
+    POST_AUTH_ENTRY --> REPORT_PULL["**Report Pull Interstitial**\nreport-pull-interstitial\n**667**"]:::frontend
+    REPORT_PULL -->|"**~65** terminal"| DROP_REPORT(["Drop"]):::drop
+    REPORT_PULL -->|"offer quality shown\n~33% of post-auth"| LBE_OFFER["**Offer Quality Form**\nlbe-seamless-reg / offerQualitySubmit\nimpression: **221** · submit: **158**"]:::frontend
+    REPORT_PULL -->|"direct\n~67% of post-auth"| MARKETPLACE
+    LBE_OFFER -->|"**~15** terminal"| DROP_OFFER(["Drop"]):::drop
+    LBE_OFFER --> MARKETPLACE
+
+    MARKETPLACE["**Completion**\nBE: personal-loan-marketplace\nfirst impression\n**460**"]:::completion
+  </div>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'default' });</script>
+</body>
+</html>

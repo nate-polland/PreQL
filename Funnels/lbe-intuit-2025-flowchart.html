@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>LBE / Intuit Auth Funnel — Sep 2025</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+<style>
+  body { font-family: sans-serif; padding: 20px; background: #fff; }
+  h2 { color: #1e3a8a; }
+  .legend { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+  .swatch { width: 16px; height: 16px; border-radius: 3px; border: 1.5px solid; }
+  .sw-frontend { background: #dbeafe; border-color: #3b82f6; }
+  .sw-backend   { background: #fef3c7; border-color: #f59e0b; }
+  .sw-drop      { background: #fee2e2; border-color: #ef4444; }
+  .sw-completion{ background: #dcfce7; border-color: #22c55e; }
+  .sw-removed   { background: #f3e8ff; border-color: #a855f7; }
+  .note { font-size: 13px; color: #555; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<h2>LBE / Intuit Auth Funnel — Sep 2025 (Historical)</h2>
+<p class="note">
+  Entry: 483 cookies (Sep 1–3, 2025, Intuit-origin only) · Conversion: 17 / 483 = <strong>3.5%</strong><br>
+  Compare to current: <a href="lbe-intuit-flowchart.html">lbe-intuit-flowchart.html</a> (11.8%, Mar 2026)
+</p>
+<div class="legend">
+  <div class="legend-item"><div class="swatch sw-frontend"></div> Frontend (user-facing screen)</div>
+  <div class="legend-item"><div class="swatch sw-backend"></div> Backend (system event)</div>
+  <div class="legend-item"><div class="swatch sw-drop"></div> Drop-off node</div>
+  <div class="legend-item"><div class="swatch sw-completion"></div> Completion</div>
+  <div class="legend-item"><div class="swatch sw-removed"></div> Removed from current funnel</div>
+</div>
+
+<div class="mermaid">
+flowchart TD
+    classDef frontend fill:#dbeafe,stroke:#3b82f6,color:#1e3a8a
+    classDef backend fill:#fef3c7,stroke:#f59e0b,color:#78350f
+    classDef drop fill:#fee2e2,stroke:#ef4444,color:#7f1d1d
+    classDef completion fill:#dcfce7,stroke:#22c55e,color:#14532d
+    classDef removed fill:#f3e8ff,stroke:#a855f7,color:#4a044e
+
+    ENTRY["**Funnel Entry**\nBE: seamless-registration\nfilter: request_url='/signup/lbe' + refUrl LIKE '%intuit%'\n**483**"]:::frontend
+
+    ENTRY -->|"~51%"| PII_FORM["**PII Form**\nseamless-registration / personalInfo\nname + email + DOB\nimpression: **246**"]:::frontend
+    ENTRY -->|"~49%"| PHONE_PATH["**Phone Entry**\nseamless-registration / phoneInfoContinue\nimpression: **237** · submit: **109**"]:::frontend
+
+    PII_FORM -->|"**~166** terminal\n(form bounce)"| DROP_PII_BOUNCE(["Drop"]):::drop
+
+    PII_FORM -->|"email recognized"| DUP_EMAIL["**Email Recognition**\nseamless-registration\nduplicateEmailRedirectToLogin\n**10**"]:::frontend
+    DUP_EMAIL --> LOGIN_AUTH["**Login Screens**\nlogin-unknown · login-options · login-password-options\n28 · 27 · 15\n⚠️ login-options not in current funnel"]:::frontend
+    LOGIN_AUTH --> LOGIN_OTC["**Login OTC / UMP**\nlogin-otc-entry-phone\nimpression: **20** · submit: **19**\n(called ump-enter-otc in current funnel)"]:::frontend
+    LOGIN_OTC -->|"auth success"| POST_AUTH_ENTRY
+    LOGIN_AUTH -->|"password auth success"| POST_AUTH_ENTRY
+    LOGIN_AUTH -->|"drops"| DROP_LOGIN(["Drop"]):::drop
+
+    PII_FORM --> PII_SUBMIT["**PII Submit**\nseamless-registration / personalInfoContinue\nsubmit: **70**"]:::frontend
+    PII_SUBMIT --> PHONE_OTP["**Phone OTP**\nseamless-registration / phoneVerificationContinue\nimpression: **178** · submit: **150**\n⚠️ shared event code: PII + phone paths"]:::frontend
+
+    PHONE_PATH -->|"**~128** terminal\n(phone bounce)"| DROP_PHONE_BOUNCE(["Drop"]):::drop
+    PHONE_PATH --> SHORT_PII["**Short PII Form**\nseamless-registration / shortPersonalInfo\nimpression: **85** · submit: **50**"]:::frontend
+    SHORT_PII --> PHONE_OTP
+
+    PHONE_OTP -->|"**~28** terminal"| DROP_OTP(["Drop"]):::drop
+    PHONE_OTP --> PROVE_PENDING["**Prove Pending**\nseamless-registration / proveVerificationPending\n**39** ⚠️ explicit state; not tracked in current funnel"]:::backend
+    PROVE_PENDING -->|"prove fail"| MATCH_FAIL["**Match Fail Recovery**\nseamless-reg / matchFailedReturn\n**30**"]:::frontend
+    MATCH_FAIL -->|"drops"| DROP_MATCH(["Drop"]):::drop
+    PROVE_PENDING -->|"prove success\nnew user"| TOS["**TOS Acceptance**\nseamless-reg / termsContinue\nimpression: **75** · submit: **66**"]:::frontend
+    TOS --> POST_AUTH_ENTRY
+    PROVE_PENDING -->|"prove success\nreturning user"| POST_AUTH_ENTRY
+
+    POST_AUTH_ENTRY["**Post-Auth Entry**\n(all authenticated paths converge)"]:::backend
+    POST_AUTH_ENTRY -.->|"survey: ~8% of entrants"| SURVEY["**Survey Flow ⚠️ Removed**\nseamless-reg / takeSurvey\nimpression: **39** · exitSurvey submit: **19**"]:::removed
+
+    POST_AUTH_ENTRY --> REPORT_PULL["**Report Pull Interstitial**\nreport-pull-interstitial\n**70**"]:::frontend
+    REPORT_PULL -->|"~86% of post-auth\n(vs ~33% today)"| LBE_OFFER["**Offer Quality Form**\nlbe-seamless-reg / offerQualitySubmit\nimpression: **60** · submit: **48**"]:::frontend
+    REPORT_PULL -->|"~14% direct"| INTUIT_CARD
+    LBE_OFFER -->|"drops"| DROP_OFFER(["Drop"]):::drop
+    LBE_OFFER --> INTUIT_CARD["**Intuit Offer Card ⚠️ Removed**\nintuit / ExpandOfferDetails\n**34**"]:::removed
+    INTUIT_CARD -->|"**~15** terminal\n(saw card, didn't click)"| DROP_INTUIT(["Drop"]):::drop
+    INTUIT_CARD -->|"PersonalLoanClick\n**19**"| MARKETPLACE
+
+    MARKETPLACE["**Completion**\nBE: personal-loan-marketplace\nfirst impression\n**17** (3.5%)"]:::completion
+</div>
+
+<script>mermaid.initialize({ startOnLoad: true, theme: 'base' });</script>
+</body>
+</html>
