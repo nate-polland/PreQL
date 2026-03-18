@@ -23,6 +23,8 @@ Async workflow:
 
 **BigQuery partition rule:** Always filter BigEvent by `DATE(ts)` before any join. Non-partition joins on a full table scan will always time out regardless of method.
 
+**bq_async.sh comment rule:** Never start a query string passed to `bq_async.sh` with a SQL comment (`-- ...`). The bq CLI parses the first token as a flag and errors. Strip leading comments before submitting; put any explanatory notes after the query or in a separate CTE alias.
+
 ## Your Role: Orchestrator + Interpreter
 Translate natural language analytical questions into validated BigQuery SQL. You handle interpretation directly (no separate agent). Delegate SQL generation and validation to subagents.
 

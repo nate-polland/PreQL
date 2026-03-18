@@ -16,7 +16,7 @@
 </head>
 <body>
   <h2>ChatGPT Authentication Funnel</h2>
-  <div class="subtitle">Primary source: BE = sponge_BigEvent &nbsp;|&nbsp; SRRF = gap-fill only &nbsp;|&nbsp; ~ = estimated &nbsp;|&nbsp; ⚠️ = caveat &nbsp;|&nbsp; Counts: Jan 1 – Mar 17, 2026</div>
+  <div class="subtitle">Primary source: BE = sponge_BigEvent &nbsp;|&nbsp; SRRF = gap-fill only &nbsp;|&nbsp; ~ = estimated &nbsp;|&nbsp; ⚠️ = caveat &nbsp;|&nbsp; Counts: Jan 1 – Mar 17, 2026 &nbsp;|&nbsp; Drop counts = terminal (mutually exclusive, sum to 4,064 = 11,549 entry − 7,488 completions)</div>
   <div class="legend">
     <div class="legend-item"><div class="swatch" style="background:#dbeafe;border-color:#3b82f6"></div> Front-end (user-facing screen)</div>
     <div class="legend-item"><div class="swatch" style="background:#fef3c7;border-color:#f59e0b"></div> Back-end (no screen)</div>
@@ -32,48 +32,46 @@ flowchart TD
 
     ENTRY["**Funnel Entry**\nBE: seamless-registration\nfilter: request_refUrl LIKE '%chatgpt%'\n**11,549**"]:::frontend
 
-    ENTRY -->|"1,124 no OTP activity"| DROP_ENTRY(["Drop"]):::drop
-
     ENTRY --> PHONE["**Phone Entry**\nseamless-reg / phoneInfoContinue\n**11,549**"]:::frontend
-    PHONE -->|"phoneInfoContinueSubmitError\n**588**"| DROP_PHONE(["Drop"]):::drop
+    PHONE -->|"**1,332** terminal"| DROP_PHONE(["Drop"]):::drop
 
-    PHONE --> OTP["**OTP Verify**\nseamless-reg / phoneVerificationContinue\n**10,425**"]:::frontend
-    OTP -->|"fail / abandon"| DROP_OTP(["Drop"]):::drop
+    PHONE --> OTP["**OTP Verify**\nseamless-reg / phoneVerificationContinue\nimpression: 10,427 · submit: 8,498"]:::frontend
+    OTP -->|"**933** terminal"| DROP_OTP(["Drop"]):::drop
 
     OTP -->|"returning user\nrecognized via phone — skip PII\n~73% of OTP"| CONSENT
 
     OTP --> NOT_SUPPORTED["**Not Supported**\nlink-chatgpt-not-supported\ncontinueClick → login redirect\n**601**"]:::frontend
+    NOT_SUPPORTED -->|"**88** terminal"| DROP_NS(["Drop"]):::drop
     NOT_SUPPORTED --> LOGIN_REDIR
 
     OTP --> MCP_TFA["**MCP 2FA Enrolled**\nlink-mcp-twofa-enrolled\n**380**"]:::frontend
+    MCP_TFA -->|"**33** terminal"| DROP_MCP(["Drop"]):::drop
     MCP_TFA --> LOGIN_REDIR
 
-    OTP --> PII["**PII Form**\nseamless-reg / shortPersonalInfo\nshortPersonalInfoContinue\n**2,543**"]:::frontend
+    OTP --> PII["**PII Form**\nseamless-reg / shortPersonalInfo\nimpression: 2,544 · submit: 1,151"]:::frontend
 
-    PII -->|"organic drop"| DROP_PII(["Drop"]):::drop
-    PII -->|"matchFailedReturn\n**822**"| MATCH_FAIL["**Match Fail Recovery**\nreg-step-1 / login-unknown\n**922**\nmostly drop"]:::frontend
-    MATCH_FAIL -->|"most drop"| DROP_MATCH(["Drop"]):::drop
+    PII -->|"**257** terminal"| DROP_PII(["Drop"]):::drop
+    PII -->|"matchFailedReturn"| MATCH_FAIL["**Match Fail Recovery**\nreg-step-1 / login-unknown"]:::frontend
+    MATCH_FAIL -->|"**305** terminal"| DROP_MATCH(["Drop"]):::drop
 
     PII --> LOGIN_REDIR["**Login Redirect**\nBE: login-web-redirect\n**961**"]:::frontend
+    LOGIN_REDIR -->|"**22** terminal"| DROP_LR(["Drop"]):::drop
 
     PII --> PROVE["**Prove API Call**\nbackend — SRRF proxy"]:::backend
-    PROVE -->|"prove fail — terminal\nshortPersonalInfoSubmitError + pageLevelError\n**751**"| DROP_PROVE_FAIL(["Drop"]):::drop
     PROVE -->|"prove fail — retry\nmatchFailedReturn on resubmit"| MATCH_FAIL
     PROVE -->|"Prove success\nreturning user — no TOS"| CONSENT
-    PROVE --> TOA["**TOS Acceptance**\nseamless-reg / termsContinue\nSRRF: completed_toa = 1\n**116** (SRRF)\n⚠️ BE termsContinue undercounts\nstitch via cookieId (pre-auth diff traceId)"]:::frontend
-    TOA -->|"organic drop\n**15**"| DROP_TOA(["Drop"]):::drop
-    TOA -->|"termsSubmitError + matchFailedReturn\n(backend match fail at TOS)\n⚠️ rare — ~16 in 90 days"| MATCH_FAIL_TOS["**Login Recovery**\nreg-step-1 → login flow"]:::frontend
-    MATCH_FAIL_TOS -->|"~16"| DROP_MATCH_TOS(["Drop"]):::drop
+    PROVE --> TOA["**TOS Acceptance**\nseamless-reg / termsContinue\nSRRF: completed_toa = 1\n**116** (SRRF)\n⚠️ BE undercounts — stitch via cookieId"]:::frontend
+    TOA -->|"**2** terminal"| DROP_TOA(["Drop"]):::drop
     TOA --> ACCT["**New Account Created**\nSRRF: regLog_account_created=0\n**114**"]:::backend
     ACCT --> CONSENT
 
     LOGIN_REDIR -->|"standard path"| AUTH["**Password / 2FA / Recovery**\nlogin-password-options\nlogin-unknown-failed-password\nlogin-verification-option-from-login\nforce-2fa-* / recovery-*\n**1,689**"]:::frontend
-    AUTH -->|"auth drop"| DROP_AUTH(["Drop"]):::drop
+    AUTH -->|"**1,020** terminal"| DROP_AUTH(["Drop"]):::drop
     AUTH --> CONSENT
 
     LOGIN_REDIR -->|"UMP path\nlogin-unknown-password-disabled-text"| UMP["**UMP Phone Verify**\nump-phone-verify\n**746**"]:::frontend
     UMP --> UMP_OTC["**Enter OTP**\nump-enter-otc\n**705**"]:::frontend
-    UMP_OTC -->|"41 · OTP fail"| DROP_UMP(["Drop"]):::drop
+    UMP_OTC -->|"**72** terminal"| DROP_UMP(["Drop"]):::drop
     UMP_OTC --> UMP_2FA["**UMP 2FA**\nump-2fa-iframe-container\nump-2fa-success-redirect\n**39**"]:::frontend
     UMP_2FA --> CONSENT
     UMP_OTC --> CONSENT
