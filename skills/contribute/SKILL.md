@@ -36,7 +36,7 @@ For new files only (no edits to existing core files):
 
 1. **Check for collisions first.** Pull latest and check if any of the new files already exist on `main`:
    ```bash
-   cd ~/Documents/Claude\ Code/PreQL
+   cd path/to/PreQL
    git fetch origin
    git diff --name-only HEAD origin/main
    ```
@@ -79,7 +79,7 @@ For edits to existing files or any changes to `Context/`, `Agents/`, or `skills/
 
 2. Create a branch:
    ```bash
-   cd ~/Documents/Claude\ Code/PreQL
+   cd path/to/PreQL
    git checkout -b [branch-name]
    ```
    Use a descriptive branch name (e.g., `update-darwin-schema`, `fix-revenue-aging-context`).
@@ -112,7 +112,7 @@ For edits to existing files or any changes to `Context/`, `Agents/`, or `skills/
 
 If the user has changed `CLAUDE.md`, let them know:
 
-> "Changes to CLAUDE.md require approval from npolland before merging. Open a PR with a description of what you changed and why, and tag npolland for review."
+> "Changes to CLAUDE.md require approval from the repo owner before merging. Open a PR with a description of what you changed and why, and tag the repo owner for review."
 
 Follow the same branch + PR flow as Tier B, but make clear the PR needs explicit owner sign-off.
 

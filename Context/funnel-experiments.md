@@ -1,6 +1,6 @@
 # Funnel Experiments
 
-How to overlay a Darwin experiment on a documented funnel. The funnel doc always represents the **control** path. Experiments are documented as a delta.
+How to overlay an experiment on a documented funnel. The funnel doc always represents the **control** path. Experiments are documented as a delta.
 
 ---
 
@@ -22,15 +22,15 @@ In the `## Experiments` section of the existing funnel doc — not as a new funn
 - **What changed:**
   - [Screen X] replaced by [Screen Y] in test arm
   - [New screen Z inserted between A and B]
-- **Darwin join:** `mt_final_{ID}` on `numericId`, filter `first_bin_flag = true AND reseed_flag = 0`
+- **Experiment join:** `[experiment_table]` on `[user_id]`, with standard assignment filters (see `Context/experiment-analysis.md`)
 ```
 
 Only document the delta — what is structurally different in the test arm vs. control.
 
 ## Query Pattern: Per-Arm Funnel Comparison
 
-1. **Get experiment population** — join Darwin to funnel population by `numericId` within the experiment date window. Filter `first_bin_flag = true AND reseed_flag = 0`.
-2. **Split by arm** — `groupName` distinguishes control vs test.
+1. **Get experiment population** — join experiment table to funnel population by user ID within the experiment date window. Apply standard assignment filters (first assignment, no reseeding — see schema docs).
+2. **Split by arm** — use the variant/group field from the experiment table to distinguish control vs test.
 3. **Run funnel per arm** — control uses the standard funnel query. Test arms with structural changes need a modified query matching the test arm path.
 4. **Compare step-by-step** — for each step, report `users_reached`, `conversion_rate` per arm.
 
@@ -38,8 +38,8 @@ See `Context/funnel-measurement-patterns.md` Pattern 4 (Multi-Path) and Pattern 
 
 ## Key Constraints
 
-- **Darwin join is post-auth only** — `numericId` is the join key, meaning only authenticated users are in the experiment population. For funnels starting unauthenticated, this creates survivorship bias in the denominator. Document this caveat when reporting.
-- **Darwin `cookieId`/`deviceId` are NULL for USER-type experiments** (validated). Cannot stitch pre-auth funnel events to experiment arms without `numericId`.
+- **Post-auth experiment join** — if the experiment bins on authenticated user ID, only authenticated users are in the experiment population. For funnels starting unauthenticated, this creates survivorship bias in the denominator. Document this caveat when reporting.
+- **Pre-auth identifier availability** — check what identifiers your experiment platform populates. Cannot stitch pre-auth funnel events to experiment arms without a pre-auth identifier. Check the experiment table schema before assuming pre-auth joins are available.
 - **Never mix control and test arm users** in a single funnel query.
 - **Test arm entry points** — if the test arm uses a different entry filter, the control funnel query cannot be reused. Document the test arm entry filter and run separately.
 - **Post-filters** — check `inPostFilter` if configured. Ask experiment owner before including.
@@ -48,4 +48,4 @@ See `Context/funnel-measurement-patterns.md` Pattern 4 (Multi-Path) and Pattern 
 
 - Do not create a new funnel doc for a test arm — document the delta in the existing funnel
 - Do not overwrite the control funnel definition
-- Do not assume pre-auth identifiers are available in Darwin — check `testType` first
+- Do not assume pre-auth identifiers are available — check the experiment table schema first

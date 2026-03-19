@@ -1,14 +1,14 @@
 ---
 name: add-table-schema
 description: |
-  Interactive workflow for documenting a new BigQuery table schema. Use when a user wants to add a new table to the Schema/ directory, or when a query references an undocumented table.
+  Interactive workflow for documenting a new data warehouse table schema. Use when a user wants to add a new table to the Schema/ directory, or when a query references an undocumented table.
 
   Trigger phrases: "add this table", "document this table", "new table schema", "add schema for", or when a query uses a table with no Schema/ file.
 ---
 
 # Add Table Schema Workflow
 
-You are a Senior Data Analyst helping document a new BigQuery table. Work interactively with the user. The goal is a useful, accurate schema file — not an exhaustive one. Start with what's needed and expand over time.
+You are a Senior Data Analyst helping document a new data warehouse table. Work interactively with the user. The goal is a useful, accurate schema file — not an exhaustive one. Start with what's needed and expand over time.
 
 ## Phase 1 — Collect Business Context First
 
@@ -21,14 +21,21 @@ This context guides the entire exploration. Do not skip it.
 
 ## Phase 2 — Pull Raw Schema
 
-1. Pull all columns from `INFORMATION_SCHEMA.COLUMNS`:
+1. Pull all columns from `INFORMATION_SCHEMA.COLUMNS` (syntax varies by warehouse):
    ```sql
+   -- BigQuery syntax:
    SELECT column_name, data_type, is_nullable
    FROM `[project].[dataset].INFORMATION_SCHEMA.COLUMNS`
    WHERE table_name = '[table_name]'
    ORDER BY ordinal_position
+
+   -- Snowflake / Redshift syntax:
+   SELECT column_name, data_type, is_nullable
+   FROM information_schema.columns
+   WHERE table_name = '[table_name]'
+   ORDER BY ordinal_position
    ```
-2. Check partition and table options:
+2. Check partition and table options (BigQuery):
    ```sql
    SELECT option_name, option_value
    FROM `[project].[dataset].INFORMATION_SCHEMA.TABLE_OPTIONS`

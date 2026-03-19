@@ -14,7 +14,7 @@ You are a Senior Product Analyst diagnosing an unexpected metric movement. The #
 
 ## Step 1 — Define the anomaly
 
-Before touching BigQuery, ask:
+Before touching the data warehouse, ask:
 
 1. **Which metric moved?** (Be specific: "registration CVR" or "PL revenue" — not "things look weird")
 2. **By how much and over what window?** (e.g., "funnel CVR dropped from 72% to 58% this week")
@@ -31,7 +31,7 @@ Run these checks before doing any dimensional breakdown. Most "movements" are da
 
 ### 2a — Partition completeness
 
-Check if the most recent date(s) in the table are fully populated. For BigEvent and event tables, the most recent 1–2 days often have incomplete data (pipeline lag, late-arriving events).
+Check if the most recent date(s) in the table are fully populated. For large event tables, the most recent 1–2 days often have incomplete data (pipeline lag, late-arriving events).
 
 ```sql
 SELECT
@@ -48,17 +48,16 @@ If the most recent day has materially fewer rows than the 5-day average, the dat
 
 ### 2b — Filter sanity
 
-Confirm the standard filters are applied:
-- `tuFakeUserClick = 0` (FTEE, FTRE)
-- `(payoutExclusion IS NULL OR payoutExclusion = 0)` (FTRE)
-- `(user_country IS NULL OR UPPER(user_country) = 'US')` (BigEvent)
-- `country = 'US'` (FTEE, FTRE)
+Confirm the standard filters documented in the relevant `Schema/` files are applied. Common examples include:
+- Fake/test click exclusion flags (check schema docs for the right field name)
+- Payout exclusion flags for revenue tables
+- Geography filters where applicable
 
-A missing filter can appear as a sudden volume spike (e.g., Canadian traffic appearing) or a rate drop (e.g., test clicks diluting the denominator).
+A missing filter can appear as a sudden volume spike (e.g., unexpected traffic included) or a rate drop (e.g., test events diluting the denominator).
 
-### 2c — Table freshness (revenue)
+### 2c — Table freshness (revenue / lagging metrics)
 
-For FTRE, apply the revenue aging window (CC: 7d, PL: 30d, default: 14d). A period ending within the aging window will show suppressed revenue — not a real decline.
+Apply the revenue aging window documented in `Context/revenue-aging.md`. A period ending within the aging window will show suppressed revenue — not a real decline.
 
 ### 2d — Known pipeline issues
 
@@ -125,7 +124,7 @@ Based on Steps 2–4, classify the cause:
 | Category | Signals | Next step |
 |---|---|---|
 | **Data artifact** | Partition incomplete, filter missing, pipeline lag, only affects 1 day | Re-pull with correct filters; wait for data to stabilize |
-| **Experiment effect** | Concentrated in one arm; started at ramp date | Run `/experiment-analysis` or check guardrail metrics |
+| **Experiment effect** | Concentrated in one arm; started at ramp date | Run experiment significance analysis or check guardrail metrics |
 | **Product change** | Sustained shift starting at a specific date; matches an engineering deployment | Confirm deploy date, measure pre/post |
 | **External / seasonal** | Affects multiple verticals simultaneously; matches known calendar events (holidays, tax season, etc.) | Note it; unlikely to need intervention |
 | **Real regression** | Sustained, multi-day, isolated to a specific cohort or step, no known cause | Escalate; may need a bug investigation or a funnel deep-dive |

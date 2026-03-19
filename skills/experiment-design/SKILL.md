@@ -131,17 +131,17 @@ Baseline: [X%] | MDE: [Ypp] | Target: [Z%]
 
 ---
 
-## Step 6 — Darwin setup checklist
+## Step 6 — Experiment setup checklist
 
 Before handing off to engineering:
 
-- [ ] **testType confirmed** — `USER` type for post-auth numericId binner. If pre-auth, confirm `cookieId` / `deviceId` binner is available.
-- [ ] **first_bin_flag** — analysis must filter to `first_bin_flag = true` to get clean arm assignment
-- [ ] **reseed_flag** — filter `reseed_flag = 0` to exclude re-seeded users
-- [ ] **rampStartDate** — confirm date; use as lower bound in FTRE/FTEE joins
-- [ ] **rampEndDate** — will be NULL while live. Analysis cutoff = agreed end date or `CURRENT_DATE()`
-- [ ] **Binner note for USER-type experiments** — `cookieId` and `deviceId` are NULL in Darwin for USER-type experiments (validated). Join is on `numericId` only. This means the experiment population is inherently post-auth — check that your metric denominator uses a post-auth anchor.
-- [ ] **Partition safety** — confirm any BigEvent join in the analysis filters by `DATE(ts)` before joining on identifiers
+- [ ] **Binner type confirmed** — post-auth (authenticated user ID) or pre-auth (cookie/device ID)? If pre-auth, confirm your experiment platform supports pre-auth binning.
+- [ ] **Clean assignment filter** — identify the field that flags a user's first valid assignment (e.g., `first_bin_flag`, `is_first_exposure`, or equivalent). Analysis must filter to this.
+- [ ] **Reseed/reassignment exclusion** — identify and exclude users who were reassigned to a different arm during the experiment.
+- [ ] **Ramp start date** — confirm the date; use as lower bound when joining to outcome tables.
+- [ ] **Ramp end date** — will be NULL/empty while experiment is live. Analysis cutoff = agreed end date or `CURRENT_DATE()`.
+- [ ] **Post-auth survivor bias** — if the experiment bins on authenticated user ID, the denominator is inherently post-auth. If the funnel starts unauthenticated, document this caveat. Confirm that your metric denominator uses a post-auth anchor.
+- [ ] **Partition safety** — confirm any large event table join in the analysis filters by the partition key before joining on user identifiers.
 
 Refer to `Context/experiment-analysis.md` and `Context/funnel-experiments.md` for the full analysis SQL patterns once the experiment is live.
 

@@ -7,10 +7,13 @@
 #   Submit:  ./bq_async.sh "<SQL>"
 #   Check:   ./bq_async.sh --check [job_id]   (omit job_id to use last submitted)
 #   Cancel:  ./bq_async.sh --cancel [job_id]  (omit job_id to use last submitted)
+#
+# Requires: BQ_PROJECT environment variable set to your BigQuery project ID.
+# Export before running: export BQ_PROJECT=your-project-id
 
 set -uo pipefail
 
-PROJECT="prod-ck-abl-data-53"
+PROJECT="${BQ_PROJECT:?BQ_PROJECT environment variable not set. Export it before running: export BQ_PROJECT=your-project-id}"
 JOB_FILE="/tmp/bq_last_job.txt"
 MAX_ROWS=1000000
 

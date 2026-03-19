@@ -1,37 +1,43 @@
 # Sampling Methodology
 
 ## When to Sample
-- Any query touching BigEvent (BE) — always sample first
-- Any cross-table join not yet documented in `cross-table-joins.md`
+- Any query touching a large event table — always sample first
+- Any cross-table join not yet documented in `Context/cross-table-joins.md`
 - Any new field, filter, or pattern not previously validated
 
 ## How to Sample
 
 ### Time-Window Sampling (default)
-Use a 1-hour or 1-day `ts` window on BE. This is the cheapest way to validate shape, null rates, and filter behavior.
+Use a 1-hour or 1-day partition window on large event tables. This is the cheapest way to validate shape, null rates, and filter behavior.
 
 ```sql
--- 1-hour sample on BE
-WHERE ts BETWEEN TIMESTAMP_MILLIS(UNIX_MILLIS(TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)))
-  AND TIMESTAMP_MILLIS(UNIX_MILLIS(CURRENT_TIMESTAMP()))
+-- 1-day sample using the table's partition key
+WHERE [partition_key] = '[recent_date]'
 ```
 
-For non-BE tables, use a 1-day partition filter (`activitydate`, `clickdate`).
+For very large event tables with timestamp-level partitioning:
+```sql
+-- 1-hour sample
+WHERE [ts_field] BETWEEN TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)
+                     AND CURRENT_TIMESTAMP()
+```
+
+For non-event tables, use a 1-day partition filter on the table's documented partition key.
 
 ### Row-Limited Sampling (for variant comparisons)
-When comparing groups (e.g., Darwin variants), sample a fixed number per group to validate join logic before scaling:
+When comparing groups (e.g., experiment variants), sample a fixed number per group to validate join logic before scaling:
 
 ```sql
 -- 500 users per variant
 SELECT * FROM (
-  SELECT *, ROW_NUMBER() OVER (PARTITION BY groupName ORDER BY numericId) AS rn
-  FROM darwin_table
-  WHERE first_bin_flag = true AND reseed_flag = 0
+  SELECT *, ROW_NUMBER() OVER (PARTITION BY groupName ORDER BY [user_id]) AS rn
+  FROM [experiment_table]
+  WHERE [standard_filters]
 ) WHERE rn <= 500
 ```
 
 ### TABLESAMPLE (last resort)
-BigQuery's `TABLESAMPLE SYSTEM (N PERCENT)` is non-deterministic and doesn't respect partition pruning well. Prefer time-window sampling. Use TABLESAMPLE only when you need a random cross-section of unpartitioned data.
+Many warehouses support `TABLESAMPLE SYSTEM (N PERCENT)` — but it is non-deterministic and doesn't respect partition pruning well. Prefer time-window sampling. Use TABLESAMPLE only when you need a random cross-section of unpartitioned data.
 
 ## Workflow
 1. Run the sample query
@@ -40,6 +46,6 @@ BigQuery's `TABLESAMPLE SYSTEM (N PERCENT)` is non-deterministic and doesn't res
 4. Only then scale to full time window
 
 ## Cost Guardrails
-- BE queries without `ts` filter will scan terabytes. Never run one.
-- FDMA full-history scans (e.g., `MAX(activitydate)` across all time) are unavoidable for some segment queries but expensive. Warn the user these will be slow.
-- Multi-day BE joins to FTEE/FTRE: sample 1 day first, then scale.
+- Large event table queries without a partition filter will scan enormous amounts of data. Never run one.
+- Full-history scans (e.g., `MAX(date)` across all time) are unavoidable for some segment queries but expensive. Warn the user these will be slow.
+- Multi-day event table joins to other tables: sample 1 day first, then scale.

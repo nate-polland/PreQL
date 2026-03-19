@@ -1,29 +1,26 @@
-# Business Context: Revenue Aging
+# Business Context: Revenue / Metric Aging
 
 ## The Rule
-Never report final revenue for any period ending within the aging window of `CURRENT_DATE()`.
+Never report final revenue (or other lagging metrics) for any period ending within the aging window of `CURRENT_DATE()`. Recent data is incomplete and will change as partners or systems report.
 
-## Aging Windows by Vertical
-| Vertical | Aging Buffer | Reason |
+## Aging Windows
+
+Aging windows vary by revenue type, product vertical, and partner reporting cycles. Document your team's aging windows here:
+
+| Metric / Vertical | Aging Buffer | Reason |
 |---|---|---|
-| Credit Cards | 7 days | Faster partner reporting |
-| Personal Loans | 30 days | Slower funding cycle |
-| All others / unknown | 14 days | Safe default |
+| [e.g., Credit Cards] | [e.g., 7 days] | [e.g., Faster partner reporting] |
+| [e.g., Personal Loans] | [e.g., 30 days] | [e.g., Slower funding cycle] |
+| Default (unknown vertical) | [e.g., 14 days] | Safe default when vertical is unspecified |
 
-**Default:** Use 14 days when the query spans multiple verticals or vertical is unspecified.
+**Default:** Use your team's documented default aging window when the query spans multiple verticals or vertical is unspecified.
 
-**For Darwin experiments:** Use the per-vertical window when the experiment's vertical is known. Add the aging buffer to `rampEndDate` (or `CURRENT_DATE()` if live) when joining to FTRE. See `Context/experiment-analysis.md`.
+**For experiments:** Apply the per-vertical aging window when the experiment's vertical is known. Add the aging buffer to the experiment end date when joining to revenue.
 
 ## SQL Implementation
 ```sql
--- Default (multi-vertical or unknown)
-CAST(clickdate AS DATE) < DATE_SUB(CURRENT_DATE(), INTERVAL 14 DAY)
-
--- PL-specific
-CAST(clickdate AS DATE) < DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
-
--- CC-specific
-CAST(clickdate AS DATE) < DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
+-- Default aging filter (adjust interval to your team's documented default)
+CAST([date_field] AS DATE) < DATE_SUB(CURRENT_DATE(), INTERVAL [N] DAY)
 ```
 
 ## Exception

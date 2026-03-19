@@ -70,7 +70,7 @@ If the funnel structure is incomplete or a path is unvalidated:
 4. Investigate any unexpected paths before discarding them — never apply inclusion/exclusion thresholds without asking the user
 5. Only widen to a full day, then 3 days, after structure is stable
 
-Use `bq_async.sh` for BigEvent joins; MCP for counts and schema checks. Always filter `DATE(ts)` before any join on BigEvent.
+Use async execution for large event table joins; MCP for counts and schema checks. Always filter by the partition key before any join on large event tables (see `CLAUDE.md` for async path and usage).
 
 **Checkpoint:** present the structure to the user and confirm before moving to enrichment.
 
@@ -78,12 +78,12 @@ Use `bq_async.sh` for BigEvent joins; MCP for counts and schema checks. Always f
 
 Before validating the full funnel, investigate every branch where the next screen or outcome is uncertain. Enrichment is targeted: pick a specific branch (e.g., "what happens after Prove fail?"), find users who took that path, and trace their full BE time series.
 
-**Pattern — use pre-aggregated tables to find users, then trace in BE:**
-If a pre-aggregated table (e.g., SRRF) has flags that identify the population for a branch, use those flags to pull cookieIds or numericIds, then query BE for their full event sequences. This is faster and more reliable than trying to identify branch populations from BE alone.
+**Pattern — use pre-aggregated tables to find users, then trace in the event table:**
+If a pre-aggregated or summary table has flags that identify the population for a branch, use those flags to pull user IDs or session identifiers, then query the event table for their full sequences. This is faster and more reliable than trying to identify branch populations from event data alone.
 
 **For each uncertain branch:**
 1. Use the cheapest source to identify 3 users on that branch (SRRF flags, BE event filters, etc.)
-2. Pull their full BE time series via `bq_async.sh`
+2. Pull their full event time series via async execution
 3. Document what screens they actually hit — do they match the flowchart? Are there screens we're missing?
 4. Update the flowchart with findings (add new edges/nodes, relabel existing ones)
 
@@ -96,8 +96,8 @@ Repeat until the user confirms all branches are accounted for.
 After enrichment, validate the overall funnel structure by sampling random **entry-cohort** users (not completers, not path-stratified). The goal is to catch any screen or path that enrichment missed.
 
 1. Sample N random users who hit the funnel entry point — N should scale with funnel complexity (~100 for a funnel with ~10 distinct paths, enough to surface any path taken by >3% of entrants)
-2. Pull their full BE time series — all `content_screen` values, not filtered to known screens
-3. Scan for any `content_screen` not already in the flowchart
+2. Pull their full event sequences — all screen/step values, not filtered to known screens
+3. Scan for any screen not already in the flowchart
 4. For any new screen found, trace the users who hit it and determine where it fits in the funnel
 
 **Why entry-cohort, not completers:** sampling from completers only reveals screens on completion paths. Users who drop early may encounter screens that completers never see.
@@ -129,7 +129,7 @@ Only after the user approves the flowchart structure:
 3. Update the flowchart nodes with real counts
 4. Reopen the flowchart for final review
 
-Use `bq_async.sh` for all BE count queries (they'll time out via MCP).
+Use async execution for all large event table count queries (they may time out via MCP).
 
 ### Stage 5 — Finalize
 

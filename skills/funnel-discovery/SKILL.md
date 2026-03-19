@@ -65,15 +65,15 @@ State this before writing SQL. It catches join-key mismatches and column oversel
    - If the anchor fails these checks, find a better one before proceeding
 5. **Find a tight time window** — use a **3-day window** with stable, representative volume. Target 20–100 completers. Avoid `LIMIT` across a wide date range. Use 3 days (not 1) from the start — rare screens (e.g., branded offer cards, survey flows, 2FA paths) only appear in 3+ day samples; a 1-day window will miss them and force a second join query.
 6. **Confirm the window with the user** before running any joins.
-7. **Run broad screen inventory as your first BigEvent join** — before any per-user path traces, run:
+7. **Run broad screen inventory as your first event table join** — before any per-user path traces, run:
    ```sql
-   GROUP BY content_screen, system_eventCode, system_eventType,
-   COUNT(DISTINCT [stitch_key]) AS cookies
+   GROUP BY [screen_field], [event_code_field], [event_type_field],
+   COUNT(DISTINCT [stitch_key]) AS users
    ```
    over the full entry cohort with the extended session window. One async query gives you the complete screen inventory — every screen and volume combination — before you trace a single user. This eliminates the round-trip pattern of "trace user → discover new screen → trace again." Per-user path traces (Phase 4 Stage 1) are then used to understand *ordering and transitions* within the known screen set, not to discover new screens.
 
 ### Query Execution
-The BigQuery MCP connection times out at ~60s. For large event table joins, use the project's async script (`bq_async.sh`). For smaller tables, MCP is fine.
+The MCP connection may time out for long-running queries. For large event table joins, use the project's async execution script (see `CLAUDE.md`). For smaller tables, MCP is fine.
 
 **Use async for:** any query joining large event tables on non-partition keys, multi-CTE funnels, anything likely >30s. Refer to `CLAUDE.md` for the exact async script path and usage for this project.
 
@@ -89,7 +89,7 @@ The BigQuery MCP connection times out at ~60s. For large event table joins, use 
 
 If users start unauthenticated:
 1. **Identify available session identifiers** on the completion event — check null rates for traceId, cookieId, deviceId, numericId
-2. **Choose the stitch key** — for BigEvent funnels, `user_traceId` is the cross-auth stitch key (`glid` is auth-only and will miss pre-auth events). For other tables, use `cookieId` or whichever ID is populated pre-auth.
+2. **Choose the stitch key** — for event table funnels, identify which ID persists across the auth boundary. A page-load or trace ID may reset on navigation; a browser/cookie ID typically persists. Check null rates for each candidate to find the best stitch key.
 3. **Validate stitch key completeness and cardinality** — two checks required:
    - *Completeness*: for a few users (3, then 3 more), find another ID associated with their stitch key. Search for events on that secondary ID where stitch key is NULL. If you find funnel events, the stitch key is missing sessions.
    - *Cardinality*: count how many distinct users (numericIds) map to each stitch key value. A stitch key that maps to multiple users (shared device, browser reset) will corrupt session attribution. Check both directions: stitch key → numericId AND numericId → stitch key.
@@ -177,15 +177,15 @@ After enrichment, validate the overall funnel structure by sampling random **ent
 ## Phase 5 — Identify Dropoff Population
 
 Two types of drop-off:
-- **Organic drop-off**: user saw a step impression but never proceeded (quit, abandoned) — last event was an impression (`system_eventType IN (1, 4)`)
-- **Disappearance**: user completed an action on step A, but step B never fired (possible technical failure or tracking gap) — last event was an action (`system_eventType IN (2, 3)`)
+- **Organic drop-off**: user saw a step (impression/view event) but never proceeded — last event was a view-type event
+- **Disappearance**: user completed an action on step A, but step B never fired (possible technical failure or tracking gap) — last event was an action/submit event
 
 Steps:
 1. **Broad scan first** — before filtering to a predefined screen list, run a wide query: for all non-completers, what `content_screen` values did they hit within the session window? Group by screen, order by user count. This surfaces the full set of dropout screens — pre-defining the list from the flowchart alone will miss drops at screens not yet mapped (typically 30–40% of drops in complex funnels).
 2. Use the broad scan results to build the predefined screen list for the detailed query
 3. Count users who reached early steps but NOT the completion event
 4. Use pre-auth identifiers (cookieId, traceId) for unauthenticated dropoffs
-5. For each non-completer, find their last event and classify as organic vs. disappearance based on `system_eventType`
+5. For each non-completer, find their last event and classify as organic vs. disappearance based on the event type field
 6. Group by last screen + dropout type — this surfaces the primary dropout locations
 
 See `Context/funnel-measurement-patterns.md` Pattern 3 for the SQL template.
@@ -243,15 +243,15 @@ The funnel doc always represents the **control** path. Experiments are documente
   - Entry point: [same as control / or: test arm uses different filter/screen]
   - [Screen X] replaced by [Screen Y] in test arm
   - [New screen Z inserted between A and B in test arm]
-- **Darwin join:** `[experiment table]` on `numericId`, filter `first_bin_flag = true AND reseed_flag = 0`
+- **Experiment join:** `[experiment_table]` on `[user_id]`, with standard assignment filters (see `Context/experiment-analysis.md`)
 ```
 
 Only document the delta — what is structurally different in the test arm vs. control. Screens that are identical need not be listed.
 
 ### Query pattern for per-arm funnel comparison
 
-1. **Get experiment population** — join Darwin table to the funnel population by `numericId` within the experiment date window. Filter to `first_bin_flag = true AND reseed_flag = 0`.
-2. **Split by arm** — group by `groupName` (control vs. test variants)
+1. **Get experiment population** — join experiment table to the funnel population by user ID within the experiment date window. Apply standard assignment filters (first assignment, no reseeding — see schema docs).
+2. **Split by arm** — group by the variant/group field (control vs. test variants)
 3. **Run the funnel query per arm** — for control: use the standard funnel query as documented. For test arms with structural changes (different entry point, different screens): modify the query to match the test arm path.
 4. **Compare step-by-step** — for each funnel step, report `users_reached`, `users_completed_step`, and `conversion_rate` per arm side by side.
 
@@ -270,7 +270,7 @@ Only document the delta — what is structurally different in the test arm vs. c
 - **Augment, don't replace.** When refining or correcting the flowchart, add new structure alongside existing nodes. Never remove a path just because it hasn't been validated yet. If a path is uncertain, label the edge `"⚠️ path not yet validated in data"`. Only remove a path when you have confirmed via data that it does not exist. Funnel discovery is additive until proven otherwise.
 - **Keep `.md` and `.html` tightly coupled.** Every flowchart edit must update both `Funnels/[funnel-name]-flowchart.html` and the embedded Mermaid in `Funnels/[funnel-name].md` in the same pass. Never let one drift from the other.
 - For pre-aggregated tables: binary flag patterns show what paths were hit, but go to the underlying event table for per-user timestamps and ordering
-- When tracing cross-auth sessions: identify which session identifier persists across the auth boundary (e.g., cookieId). A new session ID (traceId) is typically created at authentication AND at page reloads/errors — TOS and other pre-auth steps may be on a different session ID than the completion event. A traceId change is NOT automatically a dropout — check whether the cookieId is shared and the time gap is consistent with a reload. Stitch via cookieId to connect the full journey.
+- When tracing cross-auth sessions: identify which session identifier persists across the auth boundary. A page-load or trace ID typically resets on navigation and at the auth boundary — pre-auth steps may be on a different ID than the completion event. A session ID change is NOT automatically a dropout — check whether a persistent cross-session ID (e.g., cookie ID) is shared and the time gap is consistent with a reload. Stitch via the persistent ID to connect the full journey.
 - Document everything to Funnels/ so future queries work without re-exploration
 - Refer to the project's `CLAUDE.md` and `Schema/` for table names, event field names, and stitch key specifics
 

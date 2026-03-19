@@ -14,9 +14,9 @@ Display the following as a clean, readable overview. Keep it conversational — 
 
 ## What PreQL Is
 
-PreQL translates plain-English questions into validated BigQuery SQL. You ask a question, it figures out the right tables and logic, generates the SQL, validates it, and returns a plain-English summary alongside the query.
+PreQL translates plain-English questions into validated SQL. You ask a question, it figures out the right tables and logic, generates the SQL, validates it, and returns a plain-English summary alongside the query.
 
-**BigQuery access is read-only.** PreQL cannot write, modify, or delete data.
+**Data warehouse access is read-only.** PreQL cannot write, modify, or delete data.
 
 ---
 
@@ -24,9 +24,9 @@ PreQL translates plain-English questions into validated BigQuery SQL. You ask a 
 
 Just type your question. Examples:
 
-- *"How many new members registered last month, broken down by platform?"*
-- *"What was the ChatGPT registration funnel conversion rate over the last 30 days?"*
-- *"Did experiment 71788 significantly improve registration completion rate?"*
+- *"How many new users registered last month, broken down by platform?"*
+- *"What was the signup funnel conversion rate over the last 30 days?"*
+- *"Did experiment X significantly improve registration completion rate?"*
 - *"How many dormant users reactivated in Q1?"*
 
 **Tips:**
@@ -44,9 +44,9 @@ Just type your question. Examples:
 | `/funnel-discovery` | Maps an unfamiliar product funnel end-to-end and saves a reusable doc |
 | `/funnel-decomposition` | Decomposes a documented funnel into path-based cohorts — % of users and completion rate |
 | `/update-funnel` | Updates an existing funnel doc with new findings, step counts, or flowchart changes |
-| `/experiment-design` | Power calculation + hypothesis doc + Darwin setup checklist before shipping an experiment |
+| `/experiment-design` | Power calculation + hypothesis doc + experiment setup checklist before shipping an experiment |
 | `/metric-investigation` | Diagnoses an unexpected metric movement — data quality first, then dimension breakdown |
-| `/add-table-schema` | Documents a new BigQuery table so the team can query it |
+| `/add-table-schema` | Documents a new data warehouse table so the team can query it |
 | `/update-table-schema` | Updates an existing schema doc (new fields, validated flags, join key changes) |
 | `/data-lineage` | Traces where a table comes from, how it's built, and whether it's reliable |
 | `/contribute` | Push local changes (new schemas, funnels, fixes) back to GitHub |
@@ -60,10 +60,10 @@ Just type your question. Examples:
 
 PreQL has pre-loaded knowledge of your team's key tables, join patterns, and business logic:
 
-- **Tables:** BigEvent, FTRE (revenue), FTEE (engagement), SRRF (registration), Darwin (experiments), MatchedMembers, and more
-- **Business rules:** Revenue aging buffer, US-only defaults, partition safety
-- **Funnel docs:** Documented product funnels (e.g., ChatGPT → CK registration)
-- **Segment definitions:** Dormant users, churned users, and others
+- **Tables:** All tables documented in `Schema/` — add new ones with `/add-table-schema`
+- **Business rules:** Revenue aging, partition safety, join key validation (see `Context/`)
+- **Funnel docs:** Documented product funnels in `Funnels/` — add new ones with `/funnel-discovery`
+- **Segment definitions:** User population definitions in `Segments/`
 
 ---
 
@@ -88,5 +88,5 @@ New schemas, funnels, and skills get added regularly. Run `/sync` to pull the la
 
 You can also pull manually if you prefer:
 ```bash
-cd ~/Documents/Claude\ Code/PreQL && git pull && bash scripts/install-skills.sh
+cd path/to/PreQL && git pull && bash scripts/install-skills.sh
 ```

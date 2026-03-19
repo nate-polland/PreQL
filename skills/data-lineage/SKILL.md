@@ -33,28 +33,27 @@ WHERE table_name = '[table_name]'
 - **VIEW**: extract the source reference from the DDL and repeat on it. Keep going until you hit a BASE TABLE or lose access.
 - **BASE TABLE**: the table is populated by an external ETL. Move to Step 2.
 
-At CK, proxy/airlock views are common — they look like `SELECT * FROM [other_project].[dataset].[table]` with no logic. Follow through them without stopping.
+Proxy views are common in many data platforms — they look like `SELECT * FROM [other_project].[dataset].[table]` with no logic. Follow through them without stopping.
 
 **If you hit a 403 during the chain:** see the **Access Issues** section below before concluding the source is unknown.
 
 ### Step 2 — Find the ETL pipeline
 
-```bash
-GH_HOST=code.corp.creditkarma.com gh search code "[table_name]" --limit 20
-```
-
-Scan for `.sql` files in `dags/` (Airflow) or `models/` (dbt) directories. If multiple repos match, the one with `CREATE OR REPLACE TABLE` or `INSERT INTO [target_table]` is the builder:
+Search your team's code repository for the table name. Look for `.sql` files in pipeline directories (Airflow `dags/`, dbt `models/`, etc.). The file with `CREATE OR REPLACE TABLE` or `INSERT INTO [target_table]` is the builder.
 
 ```bash
-GH_HOST=code.corp.creditkarma.com gh api \
-  "repos/[org]/[repo]/contents/[path/to/file.sql]" --jq '.content' | base64 -d
+# Example using GitHub CLI (adjust hostname and org as needed):
+gh search code "[table_name]" --limit 20
+
+# To read a specific file:
+gh api "repos/[org]/[repo]/contents/[path/to/file.sql]" --jq '.content' | base64 -d
 ```
 
 ### Step 3 — Read the ETL SQL
 
 Look for these specifically — they're what determines what the table actually measures:
 
-**Source tables** — What raw tables does the ETL read from? At CK, note whether the source is `kafka_streaming` or `kafka_sponge` — these are two datasets for the same BigEvent data (`kafka_streaming` has ≤15 min latency and is preferred; `kafka_sponge` is slightly delayed but identical data). A difference between these two is latency only, not a coverage issue.
+**Source tables** — What raw tables does the ETL read from? Note whether there are multiple datasets for the same underlying data (e.g., a streaming vs. batch version) — differences between these are often latency only, not a coverage issue. Check your team's data engineering docs for known dataset aliases.
 
 **Cohort filters** — Any `WHERE` clause or `HAVING` that restricts which users or events are included. A filter like `content_feature = 'LBESeamlessRegistration'` excludes users who matched on other features.
 
@@ -130,30 +129,20 @@ Recommendation output:
 
 When a table returns `Access Denied`:
 
-**1. Check if it's airlock-controlled:**
-```bash
-GH_HOST=code.corp.creditkarma.com gh search code "[table_name]" \
-  --repo ck-private/data_airlock-access-control-automation --limit 10
-```
-If a `.conf` file is found, read it to identify the source project and target projects:
-```bash
-GH_HOST=code.corp.creditkarma.com gh api \
-  "repos/ck-private/data_airlock-access-control-automation/contents/airlock-datasets/[dataset]/[table_name].conf" \
-  --jq '.content' | base64 -d
-```
+**1. Check your team's access control system** — many organizations use row-level security, dataset-level permissions, or access control automation. Check if the table is governed by an access catalog or permission system, and request access through the appropriate channel.
 
-**2. Try the other project path.** The airlock creates views in both `prod-ck-abl-data-53` and `prod-ck-acl-data-9d`. If one returns 403, try the other.
+**2. Try alternative project paths** — in multi-project data warehouse setups, the same data may be accessible via a proxy view or access-controlled copy in a different project/database. Check with your data engineering team for alternative paths.
 
-**3. Try bq CLI.** The BigQuery MCP uses a service account; the `bq` CLI uses personal gcloud credentials (`gcloud auth application-default login`). These may have different access. Try via `bq_async.sh`.
+**3. Try alternative credentials** — the MCP server may use different credentials than your personal CLI auth. If your warehouse supports it, try the query via CLI using personal credentials to distinguish MCP service account access from personal access issues.
 
-**4. If still blocked:** Direct the user to `/onboard` for the access request process (SailPoint for project-level access, AIR Jira ticket for table-level access). Document the block in your summary and recommend the pre-agg with caveats as a fallback.
+**4. If still blocked:** Direct the user to your team's access request process. Document the block in your summary and recommend using the pre-aggregated table with caveats as a fallback.
 
 ---
 
 ## Key Rules
-- Read-only — SELECT only. No writes to BigQuery.
+- Read-only — SELECT only. No writes to the data warehouse.
 - Always run Path 1 first — understand the table before deciding to go upstream
-- Follow proxy view chains fully — CK uses multi-hop airlock views; stopping at the first proxy view misses the real source
+- Follow proxy view chains fully — stopping at the first proxy view misses the real source
 - Check JOIN types in the ETL when counts diverge — inner joins are the #1 cause of silent user loss
 - When the raw source is blocked, document it and use the pre-agg with caveats rather than leaving the analysis unresolved
-- Refer to `CLAUDE.md` for project ID, MCP vs async guidance, and partition rules
+- Refer to `CLAUDE.md` for project/environment configuration, MCP vs async guidance, and partition rules

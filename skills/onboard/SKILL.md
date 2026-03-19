@@ -1,7 +1,7 @@
 ---
 name: onboard
 description: |
-  First-time setup check and guided orientation for new PreQL users. Verifies BigQuery connection, walks through fixes if needed, then gives a brief orientation and runs a sample query.
+  First-time setup check and guided orientation for new PreQL users. Verifies data warehouse connection, walks through fixes if needed, then gives a brief orientation and runs a sample query.
 
   Trigger phrases: "/onboard", "set me up", "first time setup", "check my connection", "is my setup working"
 ---
@@ -24,9 +24,9 @@ If yes: proceed.
 
 ---
 
-## Step 1 — Check BigQuery Connection
+## Step 1 — Check Data Warehouse Connection
 
-Run a cheap test query to verify BQ is connected and accessible:
+Run a cheap test query to verify the warehouse is connected and accessible:
 
 ```sql
 SELECT 1 AS connection_test
@@ -36,39 +36,23 @@ SELECT 1 AS connection_test
 
 **If it fails:** Walk through the fix:
 
-1. Check if `gcloud` is authenticated:
+1. Check if the MCP data warehouse server is configured:
+   ```bash
+   claude mcp list
+   ```
+   If the data warehouse MCP is not listed, follow the setup instructions in `README.md` to add it.
+
+2. Check authentication — if using BigQuery:
    ```bash
    gcloud auth list
    ```
    If no active account is shown, run:
    ```bash
-   gcloud auth login
+   gcloud auth login && gcloud auth application-default login
    ```
-   Then retry the BQ test query.
+   Then retry the test query.
 
-2. If that still fails, check if the MCP BigQuery server is configured:
-   ```bash
-   claude mcp list
-   ```
-   If `bigquery` is not listed, run:
-   ```bash
-   claude mcp add bigquery --scope user --transport stdio -- uvx mcp-server-bigquery --project prod-ck-abl-data-53 --location US
-   ```
-   Then restart Claude Code and try again.
-
-3. If the user gets an "Access Denied" error on `prod-ck-abl-data-53` (project-level), they need to request Airlock BigQuery access via SailPoint:
-   - Go to [SailPoint](https://iam.int.creditkarma.com/identityiq/home.jsf) → **Manage My Access** → search **"Airlock ABL BQ Access"** → submit. Manager approves via email, typically 1–2 business days.
-
-4. If "Access Denied" on a specific dataset (project access works but a query fails):
-   - Read the error: format is `Access Denied: Table project:dataset.table` — extract the dataset name.
-   - Open the [Airlock Access Catalog](https://console.cloud.google.com/dataplex/search?project=prod-ck-aac-data-6e&from_dc=true&q=tag:prod-ck-aac-data-6e.access_info_tag%20projectid:prod-ck-acl-data-9d), append `name:[dataset_name]` to the search filter, click the result → find **Access Info Tag** → that's the Google group to request.
-   - In SailPoint, search for that group name (omit `@creditkarma.com`) and submit. Manager approval required.
-   - Questions: `#airlock_access_control`
-
-5. SailPoint login problems:
-   - *"Site can't be reached":* VPN must be on `CK-US-WEST-GW` or `CK-US-EAST-GW`, not "Best Available"
-   - *Redirected to login / login fails:* Clear cookies at `chrome://settings/content/siteDetails?site=https://iam.int.creditkarma.com/` → **Clear data** → retry
-   - *Wrong username / other:* Ask in `#iam`
+3. If you get an "Access Denied" error: the user needs to request access to the relevant data warehouse project or dataset. Refer them to their team's access request process.
 
 ---
 
@@ -78,7 +62,7 @@ Ask: "Want a quick orientation, or would you rather just start asking questions?
 
 If they want the orientation, give a 3-sentence summary:
 
-> PreQL translates plain-English questions into validated BigQuery SQL. You ask a question, it interprets what you're after, generates and validates the SQL, and returns a summary with the query. It knows your team's tables, join patterns, and business logic — you don't need to.
+> PreQL translates plain-English questions into validated SQL. You ask a question, it interprets what you're after, generates and validates the SQL, and returns a summary with the query. It knows your team's tables, join patterns, and business logic — you don't need to.
 
 Then mention a few key commands to get started:
 - `/funnel-discovery` — maps a product funnel interactively and saves the doc
@@ -96,7 +80,7 @@ Ask: "Want to try a quick sample query to see how it works?"
 
 If yes, suggest this one (or let them pick their own):
 
-> "How many new members registered last month, broken down by platform?"
+> "How many new users registered last month, broken down by platform?"
 
 Run it through the normal pipeline: interpret → generate SQL → validate → present results. After the result, briefly note: "This is what every query looks like — a plain-English summary, caveats, and the SQL below it."
 
@@ -109,4 +93,3 @@ If they'd rather use their own question, go for it.
 Close by letting them know:
 - They can ask data questions in plain English at any time
 - `/help-preql` is always available for a refresher
-- `docs/onboarding-tab1.md` in the repo has the full written setup guide

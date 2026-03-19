@@ -19,14 +19,14 @@ Terms that mean different things depending on context. When a query uses one of 
 
 ## "New user" / "new member"
 
-| Usage | Meaning | Signal |
-|---|---|---|
-| **Product context** | Never had a CK account before | `termsContinue` event; new row in SRRF with `numericid IS NULL` before → `IS NOT NULL` after |
-| **Funnel context** | First time through *this funnel* | No prior entry event for this cookieId in a lookback window |
-| **Registration context** | Registered (account created) in the date range | SRRF row with `registration_date` in range |
-| **Reactivated user** | Had account, was dormant, returned | See `Segments/dormant-users.md` |
+| Usage | Meaning |
+|---|---|
+| **Product context** | Never had an account before — net-new signup |
+| **Funnel context** | First time through *this funnel* (regardless of account age) |
+| **Registration context** | Registered (account created) in the date range |
+| **Reactivated user** | Had account, was dormant, returned |
 
-**Default:** assume product-context "new user" = net-new CK account. Confirm if the question is about funnel-first-timers or account-age-based cohorts.
+**Default:** confirm with the user which definition applies. "New user" is ambiguous without context.
 
 ---
 
@@ -34,8 +34,8 @@ Terms that mean different things depending on context. When a query uses one of 
 
 | Usage | Meaning |
 |---|---|
-| **Screen impression** | User saw the landing/entry screen (`system_eventType IN (1, 4)`) |
-| **First action** | User took an action on the entry screen (`system_eventType IN (2, 3)`) |
+| **Screen impression** | User saw the landing/entry screen |
+| **First action** | User took an action on the entry screen |
 | **Session start** | First event for this stitch key in the date range |
 
 **Default:** use the impression (screen load) as entry unless the funnel doc specifies otherwise. Action-based entry undercounts users who bounced before interacting.
@@ -46,55 +46,44 @@ Terms that mean different things depending on context. When a query uses one of 
 
 | Usage | Meaning |
 |---|---|
-| **traceId** | Single page load; resets on navigation (very granular — not a full session) |
-| **cookieId** | Cross-page browser session; persists across traceId resets; resets if user clears cookies |
-| **Authenticated session** | numericId-scoped; persists across devices for logged-in users |
+| **Page-load ID** | Single page load; resets on navigation (very granular — not a full session) |
+| **Browser/cookie ID** | Cross-page session; persists across page reloads; resets if user clears cookies |
+| **Authenticated session** | User ID-scoped; persists across devices for logged-in users |
 
-**For cross-auth funnels:** use `cookieId` as the session stitch key (spans pre- and post-auth). Always validate 1:1 cardinality before using as a session identifier — see `Context/cross-table-joins.md`.
+**For cross-auth funnels:** use a persistent cross-page identifier as the session stitch key (spans pre- and post-auth). Always validate 1:1 cardinality before using as a session identifier — see `Context/cross-table-joins.md`.
 
 ---
 
 ## "User"
 
-| Context | Identifier |
-|---|---|
-| Pre-auth / anonymous | `user_cookieId` (BigEvent) |
-| Post-auth / registered | `user_dwNumericId` (BigEvent) = `numericid` (SRRF) = `numericId` (Darwin, FTEE, FTRE) |
-| Device-level | `user_deviceId` (BigEvent) |
+The right identifier depends on the auth state. Common identifiers:
 
-**Never aggregate on `cookieId` and `numericId` interchangeably** — a single user can have multiple cookieIds (device switches, cleared cookies) and a single cookieId can briefly cover multiple numericIds (shared device). For authenticated-user counts, use `numericId`.
+| Context | Identifier type |
+|---|---|
+| Pre-auth / anonymous | Browser/cookie ID or device ID |
+| Post-auth / registered | Authenticated user ID (numeric or UUID) |
+
+**Never aggregate on cookie IDs and user IDs interchangeably** — a single user can have multiple cookie IDs (device switches, cleared cookies) and a single cookie ID can briefly cover multiple users (shared device). For authenticated-user counts, use the authenticated user ID.
 
 ---
 
 ## "Completion"
 
-| Funnel | Completion definition |
-|---|---|
-| ChatGPT auth | Consent screen action (`toaContinue` or equivalent) |
-| LBE funnels | PLM (post-login marketplace) impression — first product screen after auth |
-| Registration | SRRF `completed_toa = 1` or `registration_date IS NOT NULL` |
-
-**Always confirm in the funnel doc** — "completion" is funnel-specific and cannot be assumed.
+Completion is funnel-specific and cannot be assumed. Always confirm in the funnel doc — see `Funnels/` for each funnel's completion anchor.
 
 ---
 
 ## "Dormant" / "Churned"
 
-| Term | Definition |
-|---|---|
-| **Dormant** | No login activity for 3–12 months |
-| **Churned** | No login activity for 12+ months |
+Generic definitions — adapt thresholds to your team's context:
 
-See `Segments/dormant-users.md` for the SQL filter.
+| Term | Generic Definition |
+|---|---|
+| **Dormant** | No activity for [X] months (e.g., 3–12 months) |
+| **Churned** | No activity for [Y] months (e.g., 12+ months) |
+
+See `Segments/` for your team's specific SQL filters.
 
 ---
 
-## "Approval Odds" model types
-
-| `flex_intField33` value | Label |
-|---|---|
-| `1` | ITA (CK's model) |
-| `>1` | Lightbox (partner's model) |
-| `NULL` + pre-qualified label | PQ (firm offer) |
-
-See `Context/business-context.md`.
+Add additional term definitions here as your team discovers ambiguities in recurring analyses.

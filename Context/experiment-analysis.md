@@ -1,83 +1,78 @@
-# Darwin: Query Conventions
+# Experiment Analysis: Query Conventions
 
 ## Step 0: Check Experiment Status First
 
-Always run this before writing any analysis query:
+Always run a status check before writing any analysis query:
 
 ```sql
-SELECT testName, testType, rampStartDate, rampEndDate,
+SELECT
+  testName,
+  testType,
+  rampStartDate,
+  rampEndDate,    -- NULL = experiment still live
   COUNT(*) AS total_users,
-  COUNTIF(reseed_flag = 1) AS reseeded_users,
   COUNT(DISTINCT groupName) AS num_variants,
   STRING_AGG(DISTINCT groupName ORDER BY groupName) AS variant_names
-FROM `prod-ck-abl-data-53.dwdarwinviews_standard.mt_final_{ID}`
+FROM [experiment_table]
 GROUP BY 1, 2, 3, 4
 ```
 
 - `rampEndDate IS NULL` → experiment still live; use `CURRENT_DATE()` or user-specified cutoff as upper bound
-- `reseed_flag > 0` → warn user; analyze pre/post separately or confirm to exclude reseeded users
+- Check for any reseeding or reassignment flags documented in the schema
 
 ## Required Clarifying Questions
 
 1. **Experiment ID** — required; never query without it
-2. **Which ramp?** — single final ramp (most common) or all ramps combined?
-3. **Metric type** — revenue (→ FTRE), clicks (→ FTEE), engagement (→ FDMA), or Darwin-only?
-4. **Post-filters** — apply `inPostFilter = 1`? Ask before including.
+2. **Which ramp / phase?** — single final ramp (most common) or combined?
+3. **Metric type** — revenue, clicks, engagement, or experiment-only?
+4. **Post-filters** — any additional population restrictions? Ask before including.
 
 ## Join Keys
 
-| Field | Type | Notes |
-|---|---|---|
-| `numericId` | INT64 | Always populated for `testType = 'USER'` experiments. Join to BigEvent, FTRE, FTEE, matchedMembers. |
-| `cookieId` | STRING | NULL for `testType = 'USER'` experiments (validated on mt_final_71788 — 100% null). Likely populated only for cookie-based experiment types. **Do not assume available.** |
-| `deviceId` | STRING | Same as cookieId — NULL for USER-type experiments. |
-
-**For funnels that start unauthenticated:** Darwin joins on `numericId` only (for USER-type experiments), meaning the experiment population is inherently post-auth. Use the session stitching pattern in `Context/cross-table-joins.md` to bridge pre-auth BigEvent events — but the experiment denominator will be auth users only, not full funnel entrants. Check `testType` before assuming `cookieId`/`deviceId` are available.
+Refer to `Context/cross-table-joins.md` for validated join keys between your experiment table and outcome tables (revenue, events, etc.).
 
 ## Standard Filters
 
+Apply filters documented in the experiment table's `Schema/` file. Common examples:
 ```sql
-WHERE first_bin_flag = true
-  AND reseed_flag = 0
--- Add: AND rampId = '<id>' for a specific ramp
+WHERE first_bin_flag = true    -- or equivalent "clean assignment" flag
+  AND reseed_flag = 0          -- exclude reassigned users if applicable
 ```
+
+Check your experiment table's schema — filter names vary by platform.
 
 ## Metric Normalization
 
-Always divide by user count — group sizes vary by ramp %. Never compare raw sums.
+Always divide by user count — group sizes vary by ramp %. Never compare raw sums between variants.
 
-## Revenue Date Window (Darwin → FTRE)
+## Revenue Date Window (Experiment → Revenue)
 
 Apply per-vertical aging buffer from `Context/revenue-aging.md`:
-- Closed experiment: `DATE_ADD(DATE(rampEndDate), INTERVAL <aging_days> DAY)`
-- Live experiment: `CURRENT_DATE()` or user-specified cutoff; caveat revenue as incomplete
-
-## Post-Filter Fields
-
-`inPostFilter`, `inProductUserFacts`, `inUserFeatures` — experiment-specific, configured by the experiment owner. Values are 0/1. Only apply if the experiment owner confirms a post-filter was set up; otherwise these fields are 0 for all users. Always ask before including.
+- Closed experiment: add aging buffer to `rampEndDate`
+- Live experiment: use `CURRENT_DATE()` or user-specified cutoff; caveat revenue as incomplete
 
 ## Sanity Check (always include with results)
 
 ```sql
 SELECT
   groupName,
-  platform_at_binning,
-  CASE WHEN score_at_binning < 600 THEN 'Subprime'
-       WHEN score_at_binning < 660 THEN 'Near-prime'
-       ELSE 'Prime' END AS score_tier,
+  [platform_field],
   COUNT(*) AS users,
   ROUND(COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY groupName), 3) AS pct
-FROM `prod-ck-abl-data-53.dwdarwinviews_standard.mt_final_{ID}`
-WHERE first_bin_flag = true AND reseed_flag = 0
-GROUP BY 1, 2, 3
+FROM [experiment_table]
+WHERE [standard_filters]
+GROUP BY 1, 2
 ```
 
-**Red flag:** >2–3pp difference in score tier or platform between variants → possible assignment bug.
+**Red flag:** >2–3pp difference in platform or key demographic between variants → possible assignment bug.
 
-## Key Dimensions
+## Pre-Auth vs Post-Auth Experiments
 
-`platform_at_binning`, score tier, `vertical` (from FTRE/FTEE), cohort week
+- **Post-auth experiments** (bucketed by authenticated user ID): joining to outcome tables is straightforward on the user ID.
+- **Pre-auth experiments** (bucketed by cookie or device ID): authenticated-user joins only work after the user authenticates. The experiment denominator may be larger than what can be matched to outcome tables. Document this caveat when reporting.
+
+Always check what identifier type was used for bucketing before writing join queries.
 
 ## Funnel Experiments
 
-For experiments that modify a product funnel (entry point, screen changes, path changes), see the Experiment Overlay section in the `funnel-discovery` skill. Funnel-based experiments require per-arm funnel queries, not just metric joins — the Darwin join pattern above still applies for population splitting.
+For experiments that modify a product funnel, see `Context/funnel-experiments.md`. Funnel-based experiments require per-arm funnel queries, not just metric joins.

@@ -56,15 +56,14 @@ Use this template:
 
 ---
 
-## Step 4 — Identify the Darwin Setup
+## Step 4 — Identify the Experiment Setup
 
-For Darwin experiments at CK:
+Key decisions before handing off to engineering:
 
-- **Pre-auth funnel** (user not yet logged in): Darwin can only bin on `cookieId` or `deviceId`. Note this means re-entry by the same user may land in a different arm. Flag this as a limitation.
-- **Post-auth funnel**: bin on `numericId`. Cleaner allocation; user is sticky to their arm across sessions.
-- **USER-type experiments**: `cookieId` and `deviceId` are NULL in Darwin (validated). Join is `numericId` only — effectively post-auth.
+- **Pre-auth funnel** (user not yet logged in): can your experiment platform bin on cookie/device ID? Note this means re-entry by the same user may land in a different arm. Flag this as a limitation.
+- **Post-auth funnel**: bin on authenticated user ID. Cleaner allocation; user is sticky to their arm across sessions.
 
-Check `testType` on the Darwin table before assuming pre-auth identifiers are available for the join.
+Check what identifier types your experiment platform supports for bucketing before assuming pre-auth identifiers are available for the join.
 
 **Minimum detectable effect (MDE) estimate:**
 ```python
@@ -84,7 +83,7 @@ n_per_arm = (z_alpha + z_beta)**2 * 2 * p_bar * (1 - p_bar) / mde**2
 print(f"Required: {n_per_arm:.0f} users per arm")
 ```
 
-At CK, funnel volume is often the binding constraint — verify weekly cohort size before committing to a test duration.
+Funnel volume is often the binding constraint — verify weekly cohort size before committing to a test duration.
 
 ---
 
@@ -96,4 +95,4 @@ Before shipping, document:
 3. Any planned subgroup analyses (these inflate Type I error; apply Bonferroni if multiple)
 4. The planned run duration (don't peek and stop early)
 
-See `Context/experiment-analysis.md` and `Context/funnel-experiments.md` for the full Darwin join and significance-testing patterns.
+See `Context/experiment-analysis.md` and `Context/funnel-experiments.md` for the full experiment join and significance-testing patterns.

@@ -8,7 +8,7 @@ description: |
 
 # Update Table Schema Workflow
 
-You are a Senior Data Analyst updating an existing BigQuery table schema doc. Always read the source file before proposing any change. Schema docs without frontmatter are treated as `finalized` by default.
+You are a Senior Data Analyst updating an existing data warehouse table schema doc. Always read the source file before proposing any change. Schema docs without frontmatter are treated as `finalized` by default.
 
 ## Phase 1 — Read the Existing Doc
 
@@ -177,7 +177,7 @@ After validation is complete and the user is aligned:
 ---
 
 ## Key Rules
-- **READ ONLY — ABSOLUTE RULE.** SELECT only. No writes to BigQuery.
+- **READ ONLY — ABSOLUTE RULE.** SELECT only. No writes to the data warehouse.
 - Always read the existing schema file before proposing changes
 - Start small (3–5 rows, tight date window) before any population-wide validation
 - Never apply inclusion/exclusion thresholds without asking the user — surface all findings with volumes and let them decide
@@ -185,7 +185,7 @@ After validation is complete and the user is aligned:
 - Confirm each change with the user before editing
 - Use Edit, not Write — preserve all unchanged sections
 - Schema docs without frontmatter default to `finalized`
-- Refer to `CLAUDE.md` for project ID, location, and async query rules
+- Refer to `CLAUDE.md` for project/environment-specific configuration and async query rules
 
 ## Sharing Your Work
 

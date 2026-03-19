@@ -183,15 +183,15 @@ WHERE [date_filter]
 
 For binary KPIs (converted: yes/no), use a two-proportion z-test. Run this in Python after pulling counts from BigQuery.
 
-**Step 1 — Pull counts from BQ** (using Pattern 1 or 4, split by experiment arm):
+**Step 1 — Pull counts from your warehouse** (using Pattern 1 or 4, split by experiment arm):
 ```sql
 SELECT
   arm,
   COUNT(*)        AS n,
   SUM(completed)  AS completers
 FROM session_steps
-JOIN [darwin_table] d ON [stitch_key] = d.numericId
-  AND first_bin_flag = true AND reseed_flag = 0
+JOIN [experiment_table] d ON [stitch_key] = d.[user_id]
+  AND [standard_assignment_filters]
 GROUP BY arm
 ```
 
@@ -254,7 +254,7 @@ else:
 
 **Caveats:**
 - Requires clean arm separation — never mix users across arms
-- Darwin `cookieId` and `deviceId` columns are **NULL for USER-type experiments** (validated on mt_final_71788 — 100% null). For standard USER-type experiments, the join is `numericId` only, meaning the experiment population is inherently post-auth. For funnels starting unauthenticated, this creates a survivorship bias in the denominator — the experiment can only measure users who authenticated. Check `testType` on the Darwin table before assuming pre-auth identifiers are available.
+- For experiments using authenticated user IDs as the binner: the experiment population is inherently post-auth. For funnels starting unauthenticated, this creates survivorship bias in the denominator — the experiment can only measure users who authenticated. Check what identifier type was used for bucketing before assuming pre-auth events are available.
 - Partial experiment periods (ramping up or recently ended) require date filtering to a stable ramp window
 
 ---
@@ -263,49 +263,47 @@ else:
 
 Classifies each funnel entrant into a user-type cohort based on which signal screens they hit, then measures per-cohort conversion. Useful for understanding funnel mix across time periods or between funnels.
 
-**Three cohorts (auth funnels):**
-- **🔵 Phone match:** recognized at OTP → skips PII and TOS entirely (ChatGPT: 66.4% of OTP users; LBE: <1%)
-- **🟠 PII/credential match:** existing user identified via email (DUP_EMAIL) or Prove without TOS — routed to login
-- **🟢 New user:** hit `termsContinue` (TOS acceptance = net-new account)
+**Three cohorts (auth funnels — adapt signals to your funnel):**
+- **🔵 Shortcut path:** user recognized and fast-tracked, skips standard flow
+- **🟠 Returning user:** existing account recognized, routed to login/auth path
+- **🟢 New user:** completed new account creation (TOS acceptance or equivalent)
 - **Bouncer:** no classification signal, no completion
 
 **Priority order:** 🔵 > 🟠 > 🟢 > Bouncer. Apply as a CASE WHEN chain.
 
 ```sql
 WITH entries AS (
-  SELECT user_cookieId, MIN(DATE(ts)) AS entry_date, '[funnel_label]' AS funnel
-  FROM `[event_table]`
-  WHERE DATE(ts) BETWEEN '[start]' AND '[end]'
+  SELECT [stitch_key], MIN(DATE([ts])) AS entry_date, '[funnel_label]' AS funnel
+  FROM [event_table]
+  WHERE DATE([ts]) BETWEEN '[start]' AND '[end]'
     AND [entry_filter]
-  GROUP BY user_cookieId
+  GROUP BY [stitch_key]
   -- UNION ALL additional funnels with different date windows here
 ),
 
 screens AS (
-  SELECT e.user_cookieId, e.funnel,
-    -- 🔵 Phone match: OTP recognized → skips PII entirely (no personalInfo, no login, no TOS)
-    MAX(CASE WHEN be.system_eventCode = 'phoneVerificationContinue'
-              AND NOT EXISTS (SELECT 1 FROM ...) THEN 1 ELSE 0 END) AS phone_match,
-    -- 🟠 PII/cred: hit email-recognition or login screens
-    MAX(CASE WHEN be.content_screen LIKE 'login%' OR be.content_screen LIKE 'ump%'
-              OR be.system_eventCode = 'duplicateEmailRedirectToLogin' THEN 1 ELSE 0 END) AS saw_login,
-    -- 🟢 New user: TOS acceptance
-    MAX(CASE WHEN be.system_eventCode = 'termsContinue'              THEN 1 ELSE 0 END) AS saw_tos,
-    MAX(CASE WHEN [completion_condition]                              THEN 1 ELSE 0 END) AS completed
+  SELECT e.[stitch_key], e.funnel,
+    -- 🔵 Shortcut path: recognized user bypasses full flow
+    MAX(CASE WHEN [shortcut_signal] THEN 1 ELSE 0 END) AS shortcut_path,
+    -- 🟠 Returning user: existing account recognized, routed to login
+    MAX(CASE WHEN [returning_user_signal] THEN 1 ELSE 0 END) AS saw_login,
+    -- 🟢 New user: accepted terms / created account
+    MAX(CASE WHEN [new_user_signal] THEN 1 ELSE 0 END) AS saw_tos,
+    MAX(CASE WHEN [completion_condition] THEN 1 ELSE 0 END) AS completed
   FROM entries e
-  JOIN `[event_table]` be
-    ON be.user_cookieId = e.user_cookieId
-    AND DATE(be.ts) BETWEEN e.entry_date AND DATE_ADD(e.entry_date, INTERVAL 3 DAY)
-  WHERE DATE(be.ts) BETWEEN '[earliest_entry_start]' AND '[latest_entry_end_plus_3d]'  -- static partition filter
-  GROUP BY e.user_cookieId, e.funnel
+  JOIN [event_table] be
+    ON be.[stitch_key] = e.[stitch_key]
+    AND DATE(be.[ts]) BETWEEN e.entry_date AND DATE_ADD(e.entry_date, INTERVAL 3 DAY)
+  WHERE DATE(be.[ts]) BETWEEN '[earliest_entry_start]' AND '[latest_entry_end_plus_3d]'  -- static partition filter
+  GROUP BY e.[stitch_key], e.funnel
 ),
 
 classified AS (
   SELECT *,
     CASE
-      WHEN saw_login   = 1 AND saw_tos = 0 THEN 'phone_match_🔵'
-      WHEN saw_login   = 1                 THEN 'pii_cred_match_🟠'
-      WHEN saw_tos     = 1                 THEN 'new_user_🟢'
+      WHEN shortcut_path = 1 AND saw_tos = 0 THEN 'shortcut_path_🔵'
+      WHEN saw_login     = 1                  THEN 'returning_user_🟠'
+      WHEN saw_tos       = 1                  THEN 'new_user_🟢'
       ELSE 'bouncer'
     END AS cohort
   FROM screens
@@ -326,17 +324,11 @@ ORDER BY funnel, cohort
 **Multi-funnel note:** When using UNION ALL across funnels with different date windows, the static partition filter in the `screens` join must span all windows combined (e.g., `BETWEEN '2025-09-01' AND '2026-03-15'`). If windows are far apart, split into separate queries per time period — a single 6-month scan is expensive.
 
 **Bouncer sub-segmentation (proxy only):** Bouncers have no clean cohort signal, but can be roughly typed by last screen:
-- Saw `personalInfo` impression → likely new-user analog
-- Saw `phoneInfoContinueSubmitError` → likely phone match analog (phone already registered)
-- Reached OTP but dropped → apply OTP-signal cohort split as a proxy
+- Identify the last screen reached for each bouncer
+- Group by last screen and apply the best-available cohort proxy based on what those screens indicate
+- Label these estimates as proxies in any output — they are inferred, not directly measured.
 
-Label these estimates as proxies in any output — they are inferred, not directly measured.
-
-**Validated findings (Mar 2026):**
-- ChatGPT: ~73% of OTP users are 🔵 phone match → drives 65% overall CVR
-- LBE funnels: 🔵 phone match is <1%; 70–78% are bouncers → ceiling on overall CVR
-- 🟢 new users convert at ~62–98% when the path works; LBE Intuit Sep '25 0% was a `proveVerificationPending` bug (fixed Mar '26)
-- CK-origin matchFailed rate is 18% of entry (vs ~2–4% for other LBE funnels) — largest single drop opportunity
+Document your team's validated cohort findings here after running Pattern 7 for your funnels.
 
 ---
 
@@ -430,5 +422,5 @@ ORDER BY cohort, users DESC
 - **Never mix completers and non-completers in the same step count** — entry population is the denominator; completers are a subset
 - **For cross-auth funnels:** apply the 1:1 cardinality gate on the stitch key before all joins (Pattern 1 note above)
 - **Partial periods:** always flag the most recent week/day as potentially incomplete in results
-- **Large event table joins:** use async script — refer to `CLAUDE.md` for path and usage
+- **Large event table joins:** use async execution — refer to `CLAUDE.md` for path and usage
 - **Ordered vs. unordered funnels:** Pattern 1 measures step *reach*, not step *sequence*. The `MAX(CASE WHEN ...)` flags capture whether a step was ever hit — not whether it was hit before or after another step. For ordered funnels this is fine (the sequence is enforced by the product). For unordered funnels (where users can complete steps in any order or skip to completion), do not infer sequence from the presence of a flag. If order matters, use `ROW_NUMBER()` or timestamp comparisons to confirm sequencing explicitly.

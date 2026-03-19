@@ -15,7 +15,7 @@ Pull the latest changes from GitHub while preserving any local work. Run through
 ## Step 1 — Check Local State
 
 ```bash
-cd ~/Documents/Claude\ Code/PreQL
+cd path/to/PreQL
 git status
 ```
 
@@ -50,6 +50,7 @@ Then ask: **"You have local changes. Want me to stash them, pull, then restore? 
 ### Option A: Stash and restore (most common)
 
 ```bash
+cd path/to/PreQL
 git stash
 git pull origin main
 git stash pop
