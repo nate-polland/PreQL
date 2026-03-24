@@ -126,7 +126,29 @@ Keep `session.md` up to date throughout the conversation:
 
 ---
 
+## Proactive Skill Suggestions
+
+When the conversation context maps to an available skill, suggest it before proceeding — don't just start doing the work with raw tools. Check in with the user first; don't auto-invoke.
+
+| Context signal | Skill to suggest |
+|---|---|
+| User asks about an unknown funnel, wants to map user paths, or asks "what screens do users see" | `/funnel-discovery` |
+| User wants to update a `Funnels/` doc, write back new findings, or rebuild a flowchart | `/update-funnel` |
+| User wants to understand cohort CVRs, break down a funnel by user type, or find where a path is dropping off | `/funnel-decomposition` |
+| User wants to add a new table to `Schema/` | `/add-table-schema` |
+| User wants to update an existing `Schema/` doc | `/update-table-schema` |
+| User asks where a table comes from, whether it's reliable, or wants to query upstream | `/data-lineage` |
+| User wants to design or size an experiment, run a power calculation, or set up an experiment | `/experiment-design` |
+| User says a metric moved unexpectedly, a number looks wrong, or wants to diagnose a change | `/metric-investigation` |
+| User wants to push local changes to GitHub | `/contribute` |
+| User wants to pull the latest PreQL updates | `/sync` |
+
+**Timing:** Suggest at the start of a task, not mid-way. If the user has already described what they want, one sentence is enough: *"This looks like a `/funnel-decomposition` task — want me to run that skill, or proceed directly?"*
+
+---
+
 ## Global Rules
+- **Scope pushback:** When a task expands beyond what was originally asked (new query, new analysis, new sub-breakdown), flag the scope addition in one sentence before proceeding — what's being added and roughly how much work it is. Don't silently absorb scope expansion. If the user hasn't asked for something and you're about to do it, confirm first.
 - State which `Schema/` and `Segments/` files were used
 - Partition pruning and explicit column selection on every query
 - Never expose raw epoch timestamps without converting

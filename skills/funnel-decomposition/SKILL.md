@@ -21,6 +21,27 @@ Read the relevant `Funnels/` doc before starting. Do not rely on conversation su
 
 ---
 
+## Step 0 — Pre-Flight: Can This Be Answered From the Existing Doc?
+
+Before writing any SQL, check whether the persisted Funnels/ doc already has the numbers needed.
+
+**Derive from doc first (no query needed):**
+- Cohort % splits when step counts and first-signal counts are in the doc
+- CVR for top-level cohorts if already queried and persisted
+- Sub-cohort CVR estimates when the weighted check closes (see Math-First section in `Context/funnel-measurement-patterns.md`)
+
+**Require a new query when:**
+- The sub-breakdown is not in the doc (e.g., a cohort split by sub-path when only the top-level cohort is persisted)
+- The math produces an implausible result (weighted check fails by >1pp)
+- Validating a new funnel or a new date window for the first time
+- A count is needed that doesn't appear anywhere in the flowchart or cohort table
+
+**Scope the gap before proceeding.** If the answer requires a new sub-breakdown not in the persisted doc, say so explicitly *before* querying: *"This split isn't in the existing analysis — it would require a new query. Want to proceed, or is a math-based estimate sufficient?"* The user may not realize the doc doesn't have it; surfacing that is your job.
+
+**The most common source of wasted work:** going straight to querying, hitting contamination or structural issues, then discovering the doc had the answer (or that an estimate would have been sufficient).
+
+---
+
 ## Step 1 — Define Cohorts with the User
 
 Before touching data, agree on what cohorts make sense for this funnel. Ask the user:
@@ -145,9 +166,27 @@ where `cohort_total` = classified + allocated drops (from Step 3b).
 
 ---
 
+## Step 4b — Completion Window Check
+
+Before accepting completion counts, confirm the query approach is appropriate for this funnel:
+
+**If the analysis window is > 2 weeks AND the completion screen is a regularly visited product surface for existing users** (e.g., a marketplace page that members browse independently), use a **per-user 72h timestamp window** rather than a fixed date range. Fixed windows attribute unrelated return visits as conversions.
+
+```sql
+AND b.ts < TIMESTAMP_ADD(e.first_entry_ts, INTERVAL 72 HOUR)
+```
+
+See `Context/funnel-measurement-patterns.md` Pattern 10 for the full template.
+
+---
+
 ## Step 5 — Validate
 
-Two checks before presenting results:
+**Step 5a — Sample window representativeness** (run before finalising cohort percentages):
+
+Run a day-by-day entry count across your window (Pattern 9 in `funnel-measurement-patterns.md`). If any day in the sample is >2× the surrounding median, flag it — cohort mix and CVR measured on spike-period traffic may not reflect steady-state. Either exclude the spike days or note the caveat explicitly.
+
+**Step 5b — Cohort math checks:**
 
 **Check 1 — Cohorts sum to ~100%:**
 ```
@@ -217,6 +256,8 @@ Update the funnel doc's `## Cohort Analysis` section:
 
 ## Key Rules
 
+- **Doc first, queries second** — always check whether the question can be answered from the persisted Funnels/ doc before writing any SQL. See Step 0 and the Math-First section in `Context/funnel-measurement-patterns.md`.
+- **Scope new sub-breakdowns explicitly** — if the user asks for a split not present in the existing doc, name the gap and ask whether to proceed before querying.
 - **Cohorts first, data second** — agree on what cohorts make sense analytically before writing any SQL. The wrong cohort definition produces correct-looking but useless numbers.
 - **Never guess cohort counts** — run queries wherever counts aren't directly observable. State clearly whether a number is queried vs. estimated.
 - **Completion numerator must be direct** — do not compute completions by applying a percentage. The count must come from a query that classifies actual completers.

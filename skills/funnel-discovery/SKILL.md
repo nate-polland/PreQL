@@ -13,9 +13,10 @@ You are a Senior Product Analyst helping to reverse-engineer and document a prod
 ## Phase 1 — Define the Funnel
 
 Ask the user:
-1. **What is the completion event?** (e.g., consent table record, specific BigEvent click, flag in a summary table)
-2. **What table/screen defines a completer?** Get the exact table, filter, and timestamp field
+1. **What is the known anchor?** This is the point in the funnel you have the most confidence about — it could be the completion event, an intermediate step, or the entry click. The anchor is wherever the user (or the data) can tell you with certainty that a given user is in this funnel. (e.g., a completion table record, a specific event screen, a flag in a summary table)
+2. **What table/filter defines the anchor population?** Get the exact table, filter, and timestamp field
 3. **What type of table is the data source?** Sequential event table (one row per event with timestamps — can trace per-user paths directly) or pre-aggregated summary table (one row per user with binary flags — shows what steps were hit but not ordering or timing; must go to the underlying event table for sequential traces)?
+   - **Anchor selection principle:** The right starting anchor is wherever you have the most confidence that a user is definitively in the funnel. Any such anchor is valid — the question is what it can answer. A conversion-only table (where every row is a completer) is a great anchor for *identifying confirmed funnel members* and tracing their upstream paths. It is not a valid anchor for *measuring full-funnel drop-off rates* — users who entered and never converted are absent. If the goal is measuring drop-off, work backward from the conversion anchor to find the upstream entry table that captures the full population.
 4. **Do users start authenticated or unauthenticated?** If unauthenticated: identify the cross-auth stitch key available in the source table (e.g., `user_traceId` in BigEvent, `cookieId` in summary tables)
 5. **Approximate time window?** Ask the user how long the funnel typically takes. They'll have a rough idea. Add a buffer (e.g., if they say 5-10 minutes, start with 15). Refine empirically as data comes in.
 6. **New vs returning users?** If both, expect multiple paths
@@ -71,6 +72,7 @@ State this before writing SQL. It catches join-key mismatches and column oversel
    COUNT(DISTINCT [stitch_key]) AS users
    ```
    over the full entry cohort with the extended session window. One async query gives you the complete screen inventory — every screen and volume combination — before you trace a single user. This eliminates the round-trip pattern of "trace user → discover new screen → trace again." Per-user path traces (Phase 4 Stage 1) are then used to understand *ordering and transitions* within the known screen set, not to discover new screens.
+   - **Unexpected screens can change interpretation even without changing counts.** Before finalizing any drop-off node, check whether unexpected events appear on that screen in the inventory. Example: a form abandonment node labeled "users left silently" may actually show a survey exit button event — meaning there's already a retention mechanism in place. The count doesn't change, but the finding does. Scan the full inventory for anything on key drop screens before writing conclusions.
 
 ### Query Execution
 The MCP connection may time out for long-running queries. For large event table joins, use the project's async execution script (see `CLAUDE.md`). For smaller tables, MCP is fine.
@@ -96,23 +98,25 @@ If users start unauthenticated:
 4. **No single ID may cover the full session** — if the funnel crosses auth boundaries or page reloads, define the session as a combination of IDs: use a fine-grained ID (e.g., traceId) within a single auth state, and a persistent ID (e.g., cookieId) to bridge across boundaries. Gate cross-boundary stitching on 1:1 cardinality per the persistent ID, and document the session definition explicitly in the funnel doc.
 5. **Re-run Phase 2** using the validated stitch key(s)
 
-## Phase 4 — Build the Funnel Top-Down
+## Phase 4 — Build the Funnel
 
-The mental model is always top-down, even if data discovery required starting from the end. Building the funnel has two stages: **structure first, then counts.**
+Building the funnel has two stages: **structure first, then counts.**
 
 ### Stage 1: Build the structure (small sample)
 
 **Prerequisite:** The broad screen inventory (Phase 2b step 7) must be complete before this stage. You already know every screen that exists in the funnel — per-user path traces here are to understand *ordering and transitions*, not to discover new screens.
 
-Start with 1–2 users. Build their full per-user ordered event sequences. Understand their paths. Then validate with 3–4 more. Only widen after structure is stable.
+Start with 1–2 users from your known anchor population. Build their full per-user ordered event sequences. Understand their paths. Then validate with 3–4 more. Only widen after structure is stable.
 
-1. **Establish the start** — for known completers, what's the earliest event in their session? Work backward from the completion event during discovery, then anchor here going forward.
-2. **Establish end points** — the completion event, plus all dropout points
-3. **Build per-user ordered paths** — pull all events ordered by timestamp. Do NOT aggregate first — you lose the sequential structure.
-4. **Derive step-to-step transitions** — from per-user paths, extract every consecutive step pair (A → B). This produces the directed graph.
-5. **Investigate rare paths before discarding** — a single-user path in a small sample may represent a real segment at scale, a query artifact, or a tracking gap. Walk the raw sequence to determine which. **Never apply an inclusion/exclusion threshold silently.** Present all findings to the user with their volumes and let them decide what to include or exclude from the flowchart.
-6. **Disambiguate user types with the user** — never assume user types based on path length. Ask what distinguishes new vs returning users (e.g., a TOS screen, a specific flag, absence of numericId). Validate that distinguishing events actually appear in data.
-7. **Visualize as a flowchart** — write a Mermaid `flowchart TD` diagram and render it via a local HTML file. Do NOT use graphviz or Python for visualization.
+1. **Find the entry event** — from the known anchor point, scan each user's event sequence backward (and forward) to find the earliest event that is consistently present across users and represents the true start of the funnel. This is empirical, not assumed. The right entry may be a click, a page view, or a background event that fires before any user-facing screen.
+2. **Validate the entry filter** — confirm the entry event is specific to this funnel (not shared with other flows) and that your population filter is correct. Apply the right inclusions/exclusions before measuring anything.
+3. **Establish end points** — the completion event, plus all dropout points
+4. **Build per-user ordered paths** — pull all events ordered by timestamp. Do NOT aggregate first — you lose the sequential structure.
+5. **Derive step-to-step transitions** — from per-user paths, extract every consecutive step pair (A → B). This produces the directed graph.
+5. **Don't assume monotonically decreasing counts = a single linear sequence** — a cluster of screens with steadily decreasing counts (e.g., 787 → 756 → 620 → 601 → 577 → 468) looks like a funnel but may be multiple branches where different users take different paths. Before modeling as linear: check per-user whether any user hits more than one screen in the cluster. If yes, it's a sequence. If users typically hit only one or two, it's branching. **Sampling bias warning:** if you find candidates by filtering to users who hit ≥N screens in the cluster, you will systematically miss single-screen branches (e.g., users who go straight to the final auth step without any intermediate screens). Use an unfiltered random sample when validating auth-style fan-outs.
+6. **Investigate rare paths before discarding** — a single-user path in a small sample may represent a real segment at scale, a query artifact, or a tracking gap. Walk the raw sequence to determine which. **Never apply an inclusion/exclusion threshold silently.** Present all findings to the user with their volumes and let them decide what to include or exclude from the flowchart.
+7. **Disambiguate user types with the user** — never assume user types based on path length. Ask what distinguishes new vs returning users (e.g., a TOS screen, a specific flag, absence of numericId). Validate that distinguishing events actually appear in data.
+8. **Visualize as a flowchart** — write a Mermaid `flowchart TD` diagram and render it via a local HTML file. Do NOT use graphviz or Python for visualization.
 
    **Rendering:** Create `Funnels/[funnel-name]-flowchart.html` containing the Mermaid diagram with the CDN script (`https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js`). Open with `open "path/to/file.html"` — this opens in the user's default browser without requiring a dev server or Chrome MCP.
 
@@ -221,8 +225,9 @@ Document contents:
 **`## Recent Metrics` section format:** A dated snapshot table of every funnel step with its raw count. Include one row per step — impression count, submit count, terminal drop count. This allows any conversion or drop rate to be calculated from the doc without requerying. Append a new snapshot when counts are refreshed; keep prior snapshots for trend context.
 
 **Finalization checkpoint:** Before closing out a funnel, ask the user:
-1. **Flowchart** — is the flowchart final? Once confirmed, mark `status: final` in the `.md` header and note the date.
-2. **Queries** — are there any queries from this discovery (entry cohort, screen inventory, cohort classification, funnel counts) worth persisting? Add validated, runnable versions to `Queries/` following the format in `Queries/_index.md`. Only persist queries that are non-trivial to reconstruct and likely to be reused. Don't add minor variants of existing queries.
+1. **Terminal node accounting** — sum all terminal nodes (completed, approved-not-completed, rejected, dropped-on-form, tracking-loss, etc.) and verify they equal the entry population. If they don't, there is a filter mismatch, a population gap, or a duplicate somewhere. Common culprits: a downstream filter that silently removes valid users from conversion counts, or a table that only contains conversion rows being mistaken for a full-population table. Do not close the funnel until the terminal nodes close.
+2. **Flowchart** — is the flowchart final? Once confirmed, mark `status: final` in the `.md` header and note the date.
+3. **Queries** — are there any queries from this discovery (entry cohort, screen inventory, cohort classification, funnel counts) worth persisting? Add validated, runnable versions to `Queries/` following the format in `Queries/_index.md`. Only persist queries that are non-trivial to reconstruct and likely to be reused. Don't add minor variants of existing queries.
 
 Report: "Funnel documented at `Funnels/[funnel-name].md`. Ready for funnel queries."
 
